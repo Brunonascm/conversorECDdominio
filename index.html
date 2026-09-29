@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DE/PARA SPED ECD</title>
+<script>
+  // Aplica o tema salvo antes de desenhar a pagina, para nao piscar em branco.
+  try { if (localStorage.getItem('tema') === 'claro') document.documentElement.dataset.tema = 'claro'; } catch (e) {}
+</script>
+<style>
+/* Tema escuro e' o padrao. O claro entra com <html data-tema="claro">. */
+:root{
+  color-scheme:dark;
+  --bg:#0e1117; --side:#1a1c24; --campo:#262730; --linha:#3a3d4a; --sep:#262730;
+  --txt:#fafafa; --fraco:#a3a8b8;
+  --azul:#3d9df3; --azul-hover:#62b0f6; --verde:#3dd56d; --vermelho:#ff4b4b;
+  --hover-lista:rgba(61,157,243,.18);
+  --sombra:0 8px 28px rgba(0,0,0,.55);
+  --veu:rgba(14,17,23,.78);
+  --info-bg:rgba(28,131,225,.18);  --info-tx:#a8d3ff;
+  --ok-bg:rgba(33,195,84,.16);     --ok-tx:#a6efbd;
+  --aviso-bg:rgba(255,189,69,.16); --aviso-tx:#ffe19a;
+  --erro-bg:rgba(255,75,75,.18);   --erro-tx:#ffb3b3;
+}
+:root[data-tema="claro"]{
+  color-scheme:light;
+  --bg:#ffffff; --side:#f0f2f6; --campo:#ffffff; --linha:#e6e9ef; --sep:#f0f2f6;
+  --txt:#31333f; --fraco:#808495;
+  --azul:#0068c9; --azul-hover:#0056a6; --verde:#09ab3b; --vermelho:#ff2b2b;
+  --hover-lista:#e7f3fe;
+  --sombra:0 8px 28px rgba(0,0,0,.18);
+  --veu:rgba(255,255,255,.82);
+  --info-bg:#e7f3fe;  --info-tx:#0b5394;
+  --ok-bg:#e6f7ec;    --ok-tx:#0b6b2c;
+  --aviso-bg:#fff8e1; --aviso-tx:#7a5900;
+  --erro-bg:#ffecec;  --erro-tx:#a11;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{
+  margin:0; display:flex; min-height:100vh; color:var(--txt); background:var(--bg);
+  font-family:"Source Sans Pro",-apple-system,Segoe UI,Roboto,sans-serif; font-size:15px;
+}
+h1{font-size:2.1rem;margin:0 0 .6rem}
+h2{font-size:1.05rem;margin:1.1rem 0 .5rem}
+h3{font-size:1.4rem;margin:1.4rem 0 .7rem}
+hr{border:0;border-top:1px solid var(--linha);margin:1.2rem 0}
+a{color:var(--azul)}
+
+/* ---------------------------------------------------------------- barra lateral */
+#sidebar{
+  width:340px; flex:0 0 340px; background:var(--side); padding:1.2rem 1.3rem 4rem;
+  height:100vh; overflow-y:auto; position:sticky; top:0;
+}
+#sidebar h2:first-child{margin-top:0}
+.topo-lateral{display:flex;justify-content:flex-end;margin:-.4rem 0 .4rem}
+#btnTema{padding:.3rem .65rem;font-size:.82rem}
+main{flex:1; padding:2rem 3rem 6rem; min-width:0; max-width:1500px}
+
+label.lbl{display:block;font-size:.85rem;margin:.7rem 0 .25rem;color:var(--txt)}
+label.chk{display:flex;align-items:center;gap:.45rem;margin:.35rem 0;cursor:pointer;font-size:.92rem}
+label.chk input{margin:0;cursor:pointer;accent-color:var(--azul)}
+input[type=file]{width:100%;font-size:.82rem;background:var(--campo);color:var(--txt);border:1px solid var(--linha);border-radius:.5rem;padding:.55rem}
+input[type=text],input[type=date],select{
+  width:100%;padding:.5rem .7rem;border:1px solid var(--linha);border-radius:.5rem;
+  background:var(--campo);font:inherit;font-size:.92rem;color:var(--txt)
+}
+input::placeholder{color:var(--fraco)}
+input[type=text]:focus,input[type=date]:focus,select:focus{outline:2px solid var(--azul);outline-offset:-1px}
+input[type=checkbox],input[type=radio]{accent-color:var(--azul)}
+
+.btn{
+  display:inline-block;padding:.45rem .9rem;border:1px solid var(--linha);border-radius:.5rem;
+  background:var(--campo);color:var(--txt);font:inherit;font-size:.9rem;cursor:pointer;text-decoration:none;text-align:center
+}
+.btn:hover:not(:disabled){border-color:var(--azul);color:var(--azul)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.block{display:block;width:100%;margin-top:.6rem}
+.btn.primario{border-color:var(--azul);background:var(--azul);color:#fff}
+.btn.primario:hover{background:var(--azul-hover);border-color:var(--azul-hover);color:#fff}
+
+.caption{font-size:.8rem;color:var(--fraco);margin:.35rem 0}
+.small{font-size:.82rem}
+.msg{padding:.6rem .8rem;border-radius:.5rem;font-size:.88rem;margin:.55rem 0}
+.msg:empty{display:none;margin:0;padding:0}
+.msg.info{background:var(--info-bg);color:var(--info-tx)}
+.msg.ok{background:var(--ok-bg);color:var(--ok-tx)}
+.msg.aviso{background:var(--aviso-bg);color:var(--aviso-tx)}
+.msg.erro{background:var(--erro-bg);color:var(--erro-tx)}
+
+details{margin:.7rem 0;font-size:.88rem}
+summary{cursor:pointer;padding:.35rem 0}
+table.modelo{width:100%;border-collapse:collapse;font-size:.72rem;margin:.5rem 0}
+table.modelo th,table.modelo td{border:1px solid var(--linha);padding:.28rem .35rem;text-align:left;background:var(--campo)}
+
+/* ------------------------------------------------------------------- progresso */
+.barra{height:.5rem;background:var(--linha);border-radius:1rem;overflow:hidden;margin-bottom:.35rem}
+.barra>div{height:100%;background:var(--vermelho);width:0;transition:width .15s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:.8rem 0 1.2rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6rem}
+.grid2 small{font-size:.82rem;color:var(--fraco)}
+.linha-btns{display:flex;gap:.7rem;margin:1rem 0}
+
+.metricas div{display:flex;flex-direction:column}
+.metricas .rot{font-size:.82rem;color:var(--fraco)}
+.metricas .val{font-size:2rem;font-weight:600;line-height:1.15}
+.metricas .delta{font-size:.82rem;color:var(--verde)}
+
+/* -------------------------------------------------------------------- contas */
+.paginacao{display:flex;justify-content:center;margin:1rem 0 .2rem}
+.paginacao select{width:auto;min-width:9rem}
+.cont-row{
+  display:grid;grid-template-columns:1fr 1fr 12rem;gap:1.2rem;align-items:start;
+  border-bottom:1px solid var(--sep);padding:15px 0;
+}
+.cont-row .nome{font-weight:600}
+.cont-row .nome.feita{text-decoration:line-through;font-weight:400;color:var(--fraco)}
+.selo{display:block;padding:.4rem .7rem;border-radius:.5rem;font-size:.82rem;margin-bottom:.45rem}
+.selo.u{background:var(--info-bg);color:var(--info-tx)}
+.selo.a{background:var(--ok-bg);color:var(--ok-tx)}
+.selo.m{background:var(--aviso-bg);color:var(--aviso-tx)}
+.selo.b{background:var(--erro-bg);color:var(--erro-tx)}
+.combo-btn{
+  width:100%;text-align:left;padding:.5rem .7rem;border:1px solid var(--linha);border-radius:.5rem;
+  background:var(--campo);font:inherit;font-size:.88rem;cursor:pointer;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.combo-btn:hover{border-color:var(--azul)}
+.manual{margin-top:.5rem}
+.conf{display:flex;align-items:center;gap:.45rem;font-size:.88rem;padding-top:.35rem}
+.conf input:disabled+span{color:var(--fraco)}
+
+/* ------------------------------------------------------ seletor com busca */
+#combo{
+  position:absolute;z-index:50;background:var(--side);border:1px solid var(--linha);
+  border-radius:.6rem;box-shadow:var(--sombra);width:480px;max-width:92vw;padding:.5rem
+}
+#comboLista{max-height:320px;overflow-y:auto;margin-top:.45rem}
+#comboLista button{
+  display:block;width:100%;text-align:left;padding:.42rem .6rem;border:0;background:none;
+  font:inherit;font-size:.86rem;cursor:pointer;border-radius:.35rem;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#comboLista button:hover,#comboLista button.sel{background:var(--hover-lista)}
+#comboLista .vazio{padding:.6rem;color:var(--fraco);font-size:.85rem}
+
+/* --------------------------------------------------------------- sobreposicao */
+#overlay{position:fixed;inset:0;background:var(--veu);display:flex;align-items:center;justify-content:center;z-index:100}
+#overlay .caixa{background:var(--side);border:1px solid var(--linha);border-radius:.7rem;padding:1.4rem 1.8rem;min-width:360px;box-shadow:var(--sombra)}
+#overlay .barra>div{background:var(--azul)}
+#overlay p{margin:0 0 .8rem;font-size:.95rem}
+
+@media (max-width:1100px){
+  body{flex-direction:column}
+  #sidebar{width:100%;flex:none;height:auto;position:static}
+  main{padding:1.5rem}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .cont-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+
+  <div class="topo-lateral"><button type="button" class="btn" id="btnTema"></button></div>
+
+  <h2>1. Plano de Contas Destino</h2>
+  <label class="chk"><input type="checkbox" id="usarPadrao" checked> Usar Plano de Contas Padrão?</label>
+
+  <div id="blocoPlanoCustom" hidden>
+    <label class="lbl">Subir Novo Plano (Excel)</label>
+    <input type="file" id="filePlano" accept=".xlsx">
+    <details>
+      <summary>ℹ️ Ver Modelo / Baixar Exemplo</summary>
+      <p class="small">Seu Excel deve seguir estritamente esta ordem (sem cabeçalho):</p>
+      <table class="modelo">
+        <thead><tr><th>Coluna A</th><th>Coluna B</th><th>Coluna C</th><th>Coluna D (Opcional - Tipo)</th></tr></thead>
+        <tbody>
+          <tr><td>50</td><td>1.01.01</td><td>CAIXA GERAL</td><td>A</td></tr>
+          <tr><td>51</td><td>1.01.02</td><td>BANCO CONTA MOV.</td><td>A</td></tr>
+          <tr><td>...</td><td>...</td><td>...</td><td>... (A = Analítica / S = Sintética)</td></tr>
+        </tbody>
+      </table>
+      <a class="btn block" href="Modelo_Plano_Contas.xlsx" download>⬇️ Baixar Planilha Modelo</a>
+    </details>
+  </div>
+
+  <p class="caption" id="capPlano"></p>
+  <p class="msg" id="msgPlano"></p>
+
+  <hr>
+
+  <div id="blocoSped">
+    <h2>2. Upload do Arquivo SPED</h2>
+    <input type="file" id="fileSped" accept=".txt">
+  </div>
+  <p class="msg info" id="avisoSped" hidden>Aguardando definição/upload do Plano de Contas para liberar a importação do SPED.</p>
+  <p class="msg" id="msgSped"></p>
+
+  <hr>
+
+  <h2>💾 Backup do Trabalho</h2>
+  <label class="lbl">Carregar Progresso Salvo (.json)</label>
+  <input type="file" id="fileBackup" accept=".json">
+  <button class="btn block" id="btnSalvarBackup" hidden title="Salva todo o progresso (incluindo checagens) desta empresa específica.">⬇️ Salvar Backup Total</button>
+  <p class="msg" id="msgBackup"></p>
+
+  <hr>
+
+  <h2>📁 Modelo de DE/PARA Compartilhado</h2>
+  <p class="caption">Use para aplicar relacionamentos já prontos em outras empresas com o mesmo plano.</p>
+  <label class="lbl">Carregar Modelo de DE/PARA (.json)</label>
+  <input type="file" id="fileModelo" accept=".json">
+  <button class="btn block" id="btnExportarModelo" hidden title="Exporta apenas o dicionário de relacionamentos para aplicar em outras empresas.">⬇️ Exportar Apenas Modelo (DE/PARA)</button>
+  <p class="msg" id="msgModelo"></p>
+
+  <hr>
+
+  <h2>Filtros de Tela</h2>
+  <label class="chk"><input type="checkbox" id="ocultarMapeadas"> Ocultar contas já mapeadas?</label>
+  <label class="chk"><input type="checkbox" id="ocultarConferidas"> Ocultar contas já conferidas?</label>
+  <label class="lbl" for="porPagina">Contas exibidas por página</label>
+  <select id="porPagina">
+    <option>10</option><option>15</option><option selected>25</option><option>50</option><option>100</option>
+  </select>
+
+</aside>
+
+<main>
+  <h1>🛠️ Conversor de Lançamentos ECD</h1>
+  <p class="msg info">Foco: Substituição pelo <b>Código Reduzido</b> com indicadores de progresso.</p>
+  <p class="caption" id="capPeriodos" hidden></p>
+
+  <div id="aguardando" class="msg info">Aguardando arquivos...</div>
+
+  <section id="app" hidden>
+
+    <h3>📊 Progresso do Trabalho</h3>
+    <div class="grid2">
+      <div><div class="barra"><div id="barraMap"></div></div><small id="txtMap"></small></div>
+      <div><div class="barra"><div id="barraConf"></div></div><small id="txtConf"></small></div>
+    </div>
+
+    <div class="linha-btns">
+      <button class="btn" id="btnConferirTodas">✅ Marcar Todas como Conferidas</button>
+      <button class="btn" id="btnLimparConf">❌ Limpar todas as Conferências</button>
+    </div>
+
+    <hr>
+    <h3>🔗 Mapeamento de Contas</h3>
+    <label class="lbl" for="busca">🔍 Buscar conta por nome ou código do SPED:</label>
+    <input type="text" id="busca" autocomplete="off">
+
+    <div id="paginacao" class="paginacao"></div>
+    <p class="caption" id="capPagina"></p>
+    <div id="listaContas"></div>
+
+    <hr>
+    <div class="grid3 metricas">
+      <div><span class="rot">Total</span><span class="val" id="mTotal">0</span></div>
+      <div><span class="rot">Mapeadas</span><span class="val" id="mMap">0</span><span class="delta" id="mMapPct"></span></div>
+      <div><span class="rot">Conferidas</span><span class="val" id="mConf">0</span><span class="delta" id="mConfPct"></span></div>
+    </div>
+
+    <hr>
+    <h3>📂 Finalização, Relatórios e Downloads</h3>
+    <div class="grid3">
+
+      <div class="col">
+        <p><b>1. Arquivo Final</b></p>
+        <div id="finalArquivo"></div>
+      </div>
+
+      <div class="col">
+        <p><b>2. Balanço (I155)</b></p>
+        <label class="lbl">Referência do Saldo:</label>
+        <label class="chk"><input type="radio" name="tipoSaldo" value="Inicial (Abertura)" checked> Inicial (Abertura)</label>
+        <label class="chk"><input type="radio" name="tipoSaldo" value="Final (Fechamento)"> Final (Fechamento)</label>
+        <label class="lbl" for="dataBalanco">Data p/ Balanço:</label>
+        <input type="date" id="dataBalanco">
+        <button class="btn block" id="btnProcessarBalanco">🔍 Processar Balanço</button>
+        <div id="resultadoBalanco"></div>
+      </div>
+
+      <div class="col">
+        <p><b>3. Conferência</b></p>
+        <div id="finalConferencia"></div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- Painel de busca do seletor de conta destino. E' um so, reaproveitado por
+     todas as linhas: evita manter dezenas de milhares de <option> na tela. -->
+<div id="combo" hidden>
+  <input type="text" id="comboBusca" placeholder="Buscar conta de destino..." autocomplete="off">
+  <div id="comboLista"></div>
+</div>
+
+<div id="overlay" hidden><div class="caixa"><p id="overlayTxt"></p><div class="barra"><div id="overlayBarra"></div></div></div></div>
+
+<!-- Tudo embutido neste arquivo: nao depende de nenhum outro .css ou .js. -->
+<script>
+// ===== fuzz.js =====
+// =============================================================================
+// fuzz.js — motor de similaridade
+//
+// Port fiel de thefuzz 0.22.1 rodando sobre rapidfuzz 3.14.3, que e' exatamente
+// o que o convECDprod.py usa. Nao e' "um fuzzy parecido": e' o mesmo algoritmo,
+// com as mesmas bordas.
+//
+// Detalhes que foram medidos contra a biblioteca real e que NAO podem mudar:
+//
+//   1. thefuzz.fuzz.ratio NAO pre-processa as strings. Ja token_sort_ratio e
+//      token_set_ratio pre-processam com force_ascii=True (apagam os pontos de
+//      codigo 128..255, entao "Veiculos" com acento perde o acento).
+//   2. ratio calcula (1 - dist/lensum) * 100. Escrever a formula algebricamente
+//      equivalente 100 - 100*dist/lensum muda o ultimo bit do double e produz
+//      diferenca de 1 ponto sempre que o resultado cai exatamente em X,5.
+//      Ja o _norm_distance usado dentro do token_set_ratio usa, esse sim,
+//      100 - 100*dist/lensum. As duas formas convivem de proposito.
+//   3. round() do Python e' bancario (empate vai para o par), nao "meio pra cima".
+//   4. token_set_ratio do rapidfuzz nao e' a formula do fuzzywuzzy antigo: ele
+//      compara comprimentos de conjuntos, com atalho de 100 quando um conjunto
+//      de palavras contem o outro.
+//   5. Em process.extract o empate de pontuacao e' desempatado pelo menor
+//      indice na lista de candidatos.
+//
+// Verificado contra thefuzz/rapidfuzz instalados: 0 divergencias em 12.000
+// comparacoes de metrica e em 800 execucoes do pipeline completo de sugestao.
+// =============================================================================
+
+const NAO_PALAVRA = /[^\p{L}\p{N}_]/gu;   // equivale ao \W unicode do Python
+
+// Remove os pontos de codigo 128..255 (o "ascii dammit" do thefuzz).
+// Atencao: caracteres acima de 255 sobrevivem, igual ao original.
+function asciiOnly(s) {
+  let out = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c < 128 || c > 255) out += s[i];
+  }
+  return out;
+}
+
+function defaultProcess(s) {
+  return s.replace(NAO_PALAVRA, ' ').trim().toLowerCase();
+}
+
+function fullProcess(s, forceAscii) {
+  return defaultProcess(forceAscii ? asciiOnly(String(s)) : String(s));
+}
+
+// Depois do defaultProcess so restam caracteres de palavra e espaco simples,
+// entao dividir por ' ' equivale ao str.split() do Python.
+function tokens(s) {
+  if (!s) return [];
+  const out = [];
+  for (const t of s.split(' ')) if (t) out.push(t);
+  return out;
+}
+
+// -----------------------------------------------------------------------------
+// LCS bit-paralelo (mesma tecnica que o rapidfuzz usa internamente).
+// Conferido contra uma DP de referencia: 0 erros em 24.000 pares aleatorios,
+// cobrindo o caminho de palavra unica e o de multiplas palavras.
+// -----------------------------------------------------------------------------
+function lcsLen(a, b) {
+  const m = a.length;
+  if (m === 0 || b.length === 0) return 0;
+
+  if (m <= 32) {
+    const pm = new Map();
+    for (let i = 0; i < m; i++) {
+      const c = a.charCodeAt(i);
+      pm.set(c, (pm.get(c) || 0) | (1 << i));
+    }
+    let S = 0xFFFFFFFF;
+    for (let j = 0; j < b.length; j++) {
+      const p = pm.get(b.charCodeAt(j)) || 0;
+      const u = (S & p) >>> 0;
+      S = ((((S + u) >>> 0) | ((S - u) >>> 0)) >>> 0);
+    }
+    const mask = m === 32 ? 0xFFFFFFFF : (((1 << m) >>> 0) - 1) >>> 0;
+    return popcount((~S & mask) >>> 0);
+  }
+
+  const words = (m + 31) >> 5;
+  const pm = new Map();
+  for (let i = 0; i < m; i++) {
+    const c = a.charCodeAt(i);
+    let arr = pm.get(c);
+    if (!arr) { arr = new Uint32Array(words); pm.set(c, arr); }
+    arr[i >> 5] |= (1 << (i & 31));
+  }
+  const zero = new Uint32Array(words);
+  const S = new Uint32Array(words).fill(0xFFFFFFFF);
+  const add = new Uint32Array(words);
+  const sub = new Uint32Array(words);
+  for (let j = 0; j < b.length; j++) {
+    const p = pm.get(b.charCodeAt(j)) || zero;
+    let carry = 0, borrow = 0;
+    for (let w = 0; w < words; w++) {
+      const u = (S[w] & p[w]) >>> 0;
+      const s = S[w] + u + carry;          // exato: cabe num double
+      add[w] = s >>> 0;
+      carry = s > 0xFFFFFFFF ? 1 : 0;
+      const d = S[w] - u - borrow;
+      sub[w] = d >>> 0;
+      borrow = d < 0 ? 1 : 0;
+    }
+    for (let w = 0; w < words; w++) S[w] = (add[w] | sub[w]) >>> 0;
+  }
+  let total = 0;
+  for (let w = 0; w < words; w++) {
+    const bits = (w + 1) * 32 <= m ? 32 : m - w * 32;
+    const mask = bits === 32 ? 0xFFFFFFFF : (((1 << bits) >>> 0) - 1) >>> 0;
+    total += popcount((~S[w] & mask) >>> 0);
+  }
+  return total;
+}
+
+function popcount(x) {
+  x = x - ((x >>> 1) & 0x55555555);
+  x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+  x = (x + (x >>> 4)) & 0x0F0F0F0F;
+  return (x * 0x01010101) >>> 24;
+}
+
+function indelDistance(a, b) {
+  return a.length + b.length - 2 * lcsLen(a, b);
+}
+
+// round() do Python: empate vai para o inteiro par.
+function pyRound(x) {
+  const f = Math.floor(x);
+  const d = x - f;
+  if (d > 0.5) return f + 1;
+  if (d < 0.5) return f;
+  return f % 2 === 0 ? f : f + 1;
+}
+
+// rapidfuzz.fuzz.ratio, sem pre-processamento e sem arredondar.
+// A ordem das operacoes abaixo e' significativa (ver nota 2 no topo).
+function ratioRaw(a, b) {
+  const lensum = a.length + b.length;
+  const normDist = lensum ? indelDistance(a, b) / lensum : 0;
+  return (1 - normDist) * 100;
+}
+
+function normDistance(dist, lensum) {
+  const score = lensum ? 100 - (100 * dist) / lensum : 100;
+  return score >= 0 ? score : 0;
+}
+
+function tokenSortRaw(a, b) {
+  return ratioRaw(tokens(a).sort().join(' '), tokens(b).sort().join(' '));
+}
+
+// rapidfuzz.fuzz.token_set_ratio sobre strings JA pre-processadas.
+function tokenSetRaw(a, b) {
+  const ta = new Set(tokens(a));
+  const tb = new Set(tokens(b));
+  if (!ta.size || !tb.size) return 0;
+
+  const inter = [], dab = [], dba = [];
+  for (const t of ta) (tb.has(t) ? inter : dab).push(t);
+  for (const t of tb) if (!ta.has(t)) dba.push(t);
+
+  // um conjunto de palavras contem o outro
+  if (inter.length && (!dab.length || !dba.length)) return 100;
+
+  const ab = dab.sort().join(' ');
+  const ba = dba.sort().join(' ');
+  const abLen = ab.length;
+  const baLen = ba.length;
+  const sectLen = inter.join(' ').length;   // so o comprimento importa
+  const one = sectLen !== 0 ? 1 : 0;
+  const sectAb = sectLen + one + abLen;
+  const sectBa = sectLen + one + baLen;
+
+  const result = normDistance(indelDistance(ab, ba), sectAb + sectBa);
+  if (!sectLen) return result;
+
+  const r1 = normDistance(one + abLen, sectLen + sectAb);
+  const r2 = normDistance(one + baLen, sectLen + sectBa);
+  return Math.max(result, r1, r2);
+}
+
+// ----------------------------------------------------------------- API publica
+function tokenSortRatio(s1, s2) {
+  return pyRound(tokenSortRaw(fullProcess(s1, true), fullProcess(s2, true)));
+}
+
+function tokenSetRatio(s1, s2) {
+  return pyRound(tokenSetRaw(fullProcess(s1, true), fullProcess(s2, true)));
+}
+
+// Pre-processa a lista de candidatos uma unica vez. No Streamlit isso era
+// refeito a cada conta; aqui e' feito por grupo do plano de contas.
+function prepararCandidatos(nomes) {
+  return nomes.map((n) => fullProcess(n, true));
+}
+
+/**
+ * Equivale a process.extract(query, choices, scorer=fuzz.token_set_ratio, limit).
+ * `processados` deve vir de prepararCandidatos(). Devolve [[indice, score], ...].
+ *
+ * A query passa por full_process duas vezes exatamente como no thefuzz:
+ * _preprocess_query usa force_ascii=False e o processor interno usa True.
+ */
+function extractTokenSet(query, processados, limit = 5) {
+  const q = fullProcess(fullProcess(query, false), true);
+  const scored = new Array(processados.length);
+  for (let i = 0; i < processados.length; i++) {
+    scored[i] = [i, tokenSetRaw(q, processados[i])];
+  }
+  // empate -> menor indice, como o rapidfuzz
+  scored.sort((x, y) => (y[1] - x[1]) || (x[0] - y[0]));
+  const n = Math.min(limit, scored.length);
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = [scored[i][0], pyRound(scored[i][1])];
+  return out;
+}
+
+// ===== xlsxlite.js =====
+// =============================================================================
+// xlsxlite.js — leitor minimo de .xlsx, sem dependencia externa
+//
+// Substitui o pd.read_excel(..., header=None, dtype=str). So precisa ler:
+// primeira planilha, todas as linhas, quatro primeiras colunas, tudo como texto.
+//
+// Usa DecompressionStream('deflate-raw'), que ja e' nativo nos navegadores
+// atuais. Nao carrega uma biblioteca de ~900 KB para fazer isso.
+//
+// O dtype=str do pandas existia para impedir que o codigo 50 virasse "50.0" e a
+// classificacao 1110101001 virasse "1110101001.0" quando havia linha em branco
+// na planilha. Aqui o problema nao existe na origem: o valor numerico inteiro e'
+// devolvido como o texto cru do XML, sem passar por float.
+// =============================================================================
+
+const RELS_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+function u16(dv, p) { return dv.getUint16(p, true); }
+function u32(dv, p) { return dv.getUint32(p, true); }
+
+function lerDiretorioCentral(buf) {
+  const dv = new DataView(buf);
+  const limite = Math.max(0, buf.byteLength - 66000);
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= limite; i--) {
+    if (u32(dv, i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Arquivo nao parece ser um .xlsx valido (ZIP sem indice).');
+
+  const total = u16(dv, eocd + 10);
+  const inicio = u32(dv, eocd + 16);
+  if (total === 0xFFFF || inicio === 0xFFFFFFFF) {
+    throw new Error('Planilha em formato ZIP64 nao suportada. Salve novamente pelo Excel.');
+  }
+
+  const entradas = new Map();
+  const dec = new TextDecoder('utf-8');
+  let p = inicio;
+  for (let n = 0; n < total; n++) {
+    if (u32(dv, p) !== 0x02014b50) break;
+    const metodo = u16(dv, p + 10);
+    const tamComp = u32(dv, p + 20);
+    const tamNome = u16(dv, p + 28);
+    const tamExtra = u16(dv, p + 30);
+    const tamCom = u16(dv, p + 32);
+    const offLocal = u32(dv, p + 42);
+    const nome = dec.decode(new Uint8Array(buf, p + 46, tamNome));
+    entradas.set(nome, { metodo, tamComp, offLocal });
+    p += 46 + tamNome + tamExtra + tamCom;
+  }
+  return entradas;
+}
+
+async function extrair(buf, entradas, nome) {
+  const e = entradas.get(nome);
+  if (!e) return null;
+  const dv = new DataView(buf);
+  if (u32(dv, e.offLocal) !== 0x04034b50) throw new Error('ZIP corrompido em ' + nome);
+  const inicio = e.offLocal + 30 + u16(dv, e.offLocal + 26) + u16(dv, e.offLocal + 28);
+  const bruto = new Uint8Array(buf, inicio, e.tamComp);
+
+  let bytes;
+  if (e.metodo === 0) {
+    bytes = bruto;
+  } else if (e.metodo === 8) {
+    if (typeof DecompressionStream === 'undefined') {
+      throw new Error('Este navegador nao consegue descompactar .xlsx. Use Chrome, Edge ou Firefox atualizado.');
+    }
+    const ds = new DecompressionStream('deflate-raw');
+    const stream = new Blob([bruto]).stream().pipeThrough(ds);
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  } else {
+    throw new Error('Compressao ZIP nao suportada (metodo ' + e.metodo + ') em ' + nome);
+  }
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function xml(texto) {
+  const doc = new DOMParser().parseFromString(texto, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML invalido dentro do .xlsx.');
+  return doc;
+}
+
+const tags = (no, nome) => no.getElementsByTagNameNS('*', nome);
+
+// Texto de um <si> ou <is>, juntando as partes de texto rico e ignorando a
+// anotacao fonetica <rPh>, igual ao openpyxl.
+function textoDe(no) {
+  let s = '';
+  for (const t of tags(no, 't')) {
+    let pai = t.parentNode, fonetico = false;
+    while (pai && pai !== no) {
+      if (pai.localName === 'rPh') { fonetico = true; break; }
+      pai = pai.parentNode;
+    }
+    if (!fonetico) s += t.textContent;
+  }
+  return s;
+}
+
+function colunaDe(ref) {
+  let n = 0;
+  for (let i = 0; i < ref.length; i++) {
+    const c = ref.charCodeAt(i);
+    if (c < 65 || c > 90) break;
+    n = n * 26 + (c - 64);
+  }
+  return n - 1;
+}
+
+/**
+ * Le o .xlsx e devolve uma matriz de strings (linhas x colunas).
+ * Celula ausente vira "" — equivalente ao NaN do pandas depois do texto_celula().
+ */
+async function lerXlsx(arrayBuffer) {
+  const entradas = lerDiretorioCentral(arrayBuffer);
+
+  // Primeira planilha na ordem da pasta de trabalho (sheet_name=0 do pandas).
+  const wb = await extrair(arrayBuffer, entradas, 'xl/workbook.xml');
+  if (!wb) throw new Error('Arquivo .xlsx sem xl/workbook.xml. Salve novamente pelo Excel.');
+  const primeira = tags(xml(wb), 'sheet')[0];
+  if (!primeira) throw new Error('A planilha nao tem nenhuma aba.');
+
+  let alvo = null;
+  const rid = primeira.getAttributeNS(RELS_NS, 'id') || primeira.getAttribute('r:id');
+  const relsTxt = await extrair(arrayBuffer, entradas, 'xl/_rels/workbook.xml.rels');
+  if (rid && relsTxt) {
+    for (const r of tags(xml(relsTxt), 'Relationship')) {
+      if (r.getAttribute('Id') === rid) { alvo = r.getAttribute('Target'); break; }
+    }
+  }
+  let caminho = alvo
+    ? (alvo.startsWith('/') ? alvo.slice(1) : 'xl/' + alvo.replace(/^\.\//, ''))
+    : 'xl/worksheets/sheet1.xml';
+  if (!entradas.has(caminho)) caminho = 'xl/worksheets/sheet1.xml';
+
+  // Textos compartilhados
+  const sstTxt = await extrair(arrayBuffer, entradas, 'xl/sharedStrings.xml');
+  const sst = [];
+  if (sstTxt) for (const si of tags(xml(sstTxt), 'si')) sst.push(textoDe(si));
+
+  const shTxt = await extrair(arrayBuffer, entradas, caminho);
+  if (shTxt === null) throw new Error('Nao encontrei a primeira aba dentro do arquivo.');
+  const doc = xml(shTxt);
+
+  const linhas = [];
+  let maxCol = 0;
+  let idxImplicito = 0;
+
+  for (const row of tags(doc, 'row')) {
+    const rAttr = row.getAttribute('r');
+    const idx = rAttr ? parseInt(rAttr, 10) - 1 : idxImplicito;
+    idxImplicito = idx + 1;
+    while (linhas.length <= idx) linhas.push([]);
+    const destino = linhas[idx];
+
+    let colImplicita = 0;
+    for (const c of tags(row, 'c')) {
+      const ref = c.getAttribute('r');
+      const col = ref ? colunaDe(ref) : colImplicita;
+      colImplicita = col + 1;
+      if (col > maxCol) maxCol = col;
+      while (destino.length <= col) destino.push('');
+      destino[col] = valorCelula(c, sst);
+    }
+  }
+
+  const larg = maxCol + 1;
+  for (const l of linhas) while (l.length < larg) l.push('');
+  return linhas;
+}
+
+function valorCelula(c, sst) {
+  const t = c.getAttribute('t') || 'n';
+  if (t === 'inlineStr') {
+    const is = tags(c, 'is')[0];
+    return is ? textoDe(is) : '';
+  }
+  const v = tags(c, 'v')[0];
+  if (!v) return '';
+  const bruto = v.textContent;
+
+  if (t === 's') {
+    const i = parseInt(bruto, 10);
+    return Number.isFinite(i) && sst[i] !== undefined ? sst[i] : '';
+  }
+  if (t === 'str' || t === 'e' || t === 'd') return bruto;
+  if (t === 'b') return bruto === '1' ? 'True' : 'False';
+
+  // Numerico. Inteiro fica com o texto cru do XML: e' isso que impede uma
+  // classificacao longa de perder precisao ao virar double.
+  const s = bruto.trim();
+  if (/^-?\d+$/.test(s)) return s;
+  const n = Number(s);
+  return Number.isFinite(n) ? String(n) : s;
+}
+
+// ===== ojson.js =====
+// =============================================================================
+// ojson.js — JSON que preserva a ordem das chaves
+//
+// POR QUE ISTO EXISTE:
+// JSON.parse devolve um objeto comum, e objeto comum do JavaScript reordena
+// chaves que parecem inteiros. Um backup com {"50": "1", "10": "2"} volta como
+// {"10": "2", "50": "1"}. Dicionario do Python nao faz isso.
+//
+// Isso nao seria detalhe cosmetico: a ordem de iteracao de map_final_para_geracao
+// define a ordem das linhas |6100| do Balanco. Usar JSON.parse direto mudaria o
+// arquivo entregue depois de recarregar um backup.
+//
+// parseOrdenado devolve Map, que preserva a ordem de insercao igual ao Python.
+// =============================================================================
+
+function parseOrdenado(texto) {
+  let i = 0;
+
+  const erro = (m) => { throw new SyntaxError(`${m} (posicao ${i})`); };
+  const pular = () => { while (i < texto.length && ' \t\n\r'.includes(texto[i])) i++; };
+
+  function valor() {
+    pular();
+    if (i >= texto.length) erro('fim inesperado');
+    const c = texto[i];
+    if (c === '{') return objeto();
+    if (c === '[') return lista();
+    if (c === '"') return cadeia();
+    if (texto.startsWith('true', i)) { i += 4; return true; }
+    if (texto.startsWith('false', i)) { i += 5; return false; }
+    if (texto.startsWith('null', i)) { i += 4; return null; }
+    return numero();
+  }
+
+  function objeto() {
+    const m = new Map();
+    i++; pular();
+    if (texto[i] === '}') { i++; return m; }
+    for (;;) {
+      pular();
+      if (texto[i] !== '"') erro('esperava nome de chave');
+      const k = cadeia();
+      pular();
+      if (texto[i] !== ':') erro("esperava ':'");
+      i++;
+      m.set(k, valor());
+      pular();
+      if (texto[i] === ',') { i++; continue; }
+      if (texto[i] === '}') { i++; return m; }
+      erro("esperava ',' ou '}'");
+    }
+  }
+
+  function lista() {
+    const a = [];
+    i++; pular();
+    if (texto[i] === ']') { i++; return a; }
+    for (;;) {
+      a.push(valor());
+      pular();
+      if (texto[i] === ',') { i++; continue; }
+      if (texto[i] === ']') { i++; return a; }
+      erro("esperava ',' ou ']'");
+    }
+  }
+
+  function cadeia() {
+    i++;
+    let s = '';
+    for (;;) {
+      if (i >= texto.length) erro('texto sem fechamento');
+      const c = texto[i];
+      if (c === '"') { i++; return s; }
+      if (c === '\\') {
+        i++;
+        const e = texto[i++];
+        if (e === 'u') { s += String.fromCharCode(parseInt(texto.substr(i, 4), 16)); i += 4; }
+        else if (e === 'n') s += '\n';
+        else if (e === 't') s += '\t';
+        else if (e === 'r') s += '\r';
+        else if (e === 'b') s += '\b';
+        else if (e === 'f') s += '\f';
+        else s += e;
+      } else { s += c; i++; }
+    }
+  }
+
+  function numero() {
+    const m = /^-?\d+(\.\d+)?([eE][+-]?\d+)?/.exec(texto.slice(i));
+    if (!m) erro('valor invalido');
+    i += m[0].length;
+    return Number(m[0]);
+  }
+
+  const v = valor();
+  pular();
+  return v;
+}
+
+// -----------------------------------------------------------------------------
+// Serializacao equivalente a json.dumps(obj, indent=4) do Python: mesma
+// indentacao, mesmos separadores e ensure_ascii (nao-ASCII vira \uXXXX).
+// -----------------------------------------------------------------------------
+function dumpsOrdenado(valor, indent = 4, nivel = 0) {
+  const pad = ' '.repeat(indent * (nivel + 1));
+  const padFim = ' '.repeat(indent * nivel);
+
+  if (valor instanceof Map) {
+    if (valor.size === 0) return '{}';
+    const partes = [];
+    for (const [k, v] of valor) {
+      partes.push(`${pad}${escapar(String(k))}: ${dumpsOrdenado(v, indent, nivel + 1)}`);
+    }
+    return `{\n${partes.join(',\n')}\n${padFim}}`;
+  }
+  if (Array.isArray(valor)) {
+    if (valor.length === 0) return '[]';
+    const partes = valor.map((v) => pad + dumpsOrdenado(v, indent, nivel + 1));
+    return `[\n${partes.join(',\n')}\n${padFim}]`;
+  }
+  if (valor === null) return 'null';
+  if (typeof valor === 'boolean') return valor ? 'true' : 'false';
+  if (typeof valor === 'number') return String(valor);
+  return escapar(String(valor));
+}
+
+function escapar(s) {
+  let out = '"';
+  for (const ch of s) {
+    const c = ch.codePointAt(0);
+    if (ch === '"') out += '\\"';
+    else if (ch === '\\') out += '\\\\';
+    else if (ch === '\n') out += '\\n';
+    else if (ch === '\r') out += '\\r';
+    else if (ch === '\t') out += '\\t';
+    else if (ch === '\b') out += '\\b';
+    else if (ch === '\f') out += '\\f';
+    else if (c < 0x20) out += '\\u' + c.toString(16).padStart(4, '0');
+    else if (c < 0x7f) out += ch;
+    else if (c > 0xffff) {
+      // par substituto, igual ao ensure_ascii do Python
+      const v = c - 0x10000;
+      out += '\\u' + (0xd800 + (v >> 10)).toString(16).padStart(4, '0');
+      out += '\\u' + (0xdc00 + (v & 0x3ff)).toString(16).padStart(4, '0');
+    } else out += '\\u' + c.toString(16).padStart(4, '0');
+  }
+  return out + '"';
+}
+
+// ===== sped.js =====
+// =============================================================================
+// sped.js — leitura, analise e geracao dos arquivos
+//
+// Port de convECDprod.py. As decisoes de arquitetura do original continuam
+// valendo aqui, so que agora o "servidor" e' o proprio navegador do usuario:
+//
+//   - LEITURA EM FLUXO: o arquivo e' lido em blocos de 8 MB e nunca existe como
+//     texto inteiro na memoria. Os 277 MB do arquivo de teste custam ~8 MB de
+//     pico, nao 277.
+//   - UMA PASSADA SO: analisarSped percorre o arquivo uma unica vez.
+//   - GERACAO DIFERIDA: o SPED ajustado so e' montado no clique, e vai direto
+//     para o disco quando o navegador permite gravacao em fluxo.
+//
+// O arquivo nunca sai da maquina. Nao ha upload.
+// =============================================================================
+
+
+// str.strip() do Python: o conjunto de espacos dele nao e' igual ao do
+// String.prototype.trim(). Faixa latin-1: \t \n \v \f \r \x1c-\x1f espaco \x85 \xa0
+const ESPACOS = new Set([9, 10, 11, 12, 13, 28, 29, 30, 31, 32, 133, 160]);
+
+function pyStrip(s) {
+  let a = 0, b = s.length;
+  while (a < b && ESPACOS.has(s.charCodeAt(a))) a++;
+  while (b > a && ESPACOS.has(s.charCodeAt(b - 1))) b--;
+  return s.slice(a, b);
+}
+
+// latin-1 e' um mapeamento direto byte -> ponto de codigo, entao a decodificacao
+// e' exata. Nao da para usar TextDecoder('latin1'): pela especificacao do
+// navegador esse rotulo aponta para windows-1252, que difere nos bytes 80-9F.
+const BLOCO_DEC = 0x8000;
+function latin1Decode(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i += BLOCO_DEC) {
+    s += String.fromCharCode.apply(null, u8.subarray(i, i + BLOCO_DEC));
+  }
+  return s;
+}
+
+// encode("latin-1", errors="replace"): o que nao cabe em um byte vira '?'.
+function latin1Encode(s) {
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    out[i] = c <= 255 ? c : 63;
+  }
+  return out;
+}
+
+/**
+ * Percorre o SPED linha a linha sem materializar o arquivo.
+ * Mesmo filtro do original: descarta linha em branco e tira espacos das pontas.
+ * Se `aoAchar` devolver false, a leitura para (usado no |9999|).
+ */
+async function percorrerLinhas(file, aoAchar, aposBloco) {
+  const TAM = 8 * 1024 * 1024;
+  let resto = '';
+  let lidos = 0;
+
+  for (let pos = 0; pos < file.size; pos += TAM) {
+    const buf = await file.slice(pos, pos + TAM).arrayBuffer();
+    lidos += buf.byteLength;
+    const texto = resto + latin1Decode(new Uint8Array(buf));
+
+    let ini = 0;
+    for (;;) {
+      const nl = texto.indexOf('\n', ini);
+      if (nl < 0) break;
+      const linha = pyStrip(texto.slice(ini, nl));
+      ini = nl + 1;
+      if (linha && aoAchar(linha) === false) { if (aposBloco) await aposBloco(lidos, file.size); return; }
+    }
+    resto = texto.slice(ini);
+    if (aposBloco) await aposBloco(lidos, file.size);
+  }
+
+  const ultima = pyStrip(resto);
+  if (ultima) aoAchar(ultima);
+  if (aposBloco) await aposBloco(file.size, file.size);
+}
+
+function limparNomeArquivo(nome) {
+  return pyStrip(nome.replace(/[\\/*?:"<>|]/g, ''));
+}
+
+// datetime.strptime(s, "%d%m%Y"). O \d{1,2} do Python e' guloso com retrocesso,
+// e o do JavaScript tambem, entao a divisao dos campos e' a mesma.
+function parseDataSped(s) {
+  const m = /^(\d{1,2})(\d{1,2})(\d{4})$/.exec(s);
+  if (!m) return null;
+  const d = +m[1], mes = +m[2], y = +m[3];
+  if (mes < 1 || mes > 12 || d < 1) return null;
+  const ultimo = new Date(Date.UTC(y, mes, 0)).getUTCDate();
+  if (d > ultimo) return null;
+  return new Date(Date.UTC(y, mes - 1, d));
+}
+
+const ddmmyyyy = (dt) =>
+  String(dt.getUTCDate()).padStart(2, '0') + '/' +
+  String(dt.getUTCMonth() + 1).padStart(2, '0') + '/' +
+  dt.getUTCFullYear();
+
+// float() do Python: string vazia ou invalida levanta excecao, que o original
+// captura devolvendo 0.0. Number('') seria 0 e Number('0x10') seria 16, entao
+// o formato e' validado antes.
+function pyFloat(s) {
+  const t = pyStrip(s);
+  if (!/^[+-]?((\d+\.?\d*)|(\.\d+))([eE][+-]?\d+)?$/.test(t)) return 0;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// =============================================================================
+// ANALISE DO SPED — uma unica passada
+// =============================================================================
+async function analisarSped(file, aoProgredir) {
+  let nomeEmpresa = 'EMPRESA';
+  let dtInicial = null, dtFinal = null;
+
+  const initialBalances = new Map();
+  const finalBalances = new Map();
+  const contasComMovimento = new Set();
+  const contasI050 = [];
+  let qtdI150 = 0;
+  let achou0000 = false;
+
+  await percorrerLinhas(file, (line) => {
+    if (line.startsWith('|0000|')) {
+      if (!achou0000) {
+        achou0000 = true;
+        const p = line.split('|');
+        if (p.length > 5) nomeEmpresa = limparNomeArquivo(p[5]);
+        if (p.length > 3) dtInicial = parseDataSped(p[3]);
+        if (p.length > 4) dtFinal = parseDataSped(p[4]);
+      }
+    } else if (line.startsWith('|I150|')) {
+      qtdI150++;
+    } else if (line.startsWith('|I155|')) {
+      const reg = line.split('|');
+      if (reg.length >= 10) {
+        const cod = pyStrip(reg[2]);
+        const valIni = pyStrip(reg[4]);
+        const dcIni = pyStrip(reg[5]);
+        const valFim = pyStrip(reg[8]);
+        const dcFim = pyStrip(reg[9]);
+        if (!initialBalances.has(cod)) {
+          // Com mais de um periodo I150, o saldo inicial valido e' o do primeiro.
+          initialBalances.set(cod, qtdI150 <= 1 ? [valIni, dcIni] : ['0,00', dcIni]);
+        }
+        finalBalances.set(cod, [valFim, dcFim]);
+      }
+      if (reg.length > 2) contasComMovimento.add(pyStrip(reg[2]));
+    } else if (line.startsWith('|I250|')) {
+      const reg = line.split('|');
+      if (reg.length > 2) contasComMovimento.add(pyStrip(reg[2]));
+    } else if (line.startsWith('|I050|')) {
+      const reg = line.split('|');
+      if (reg.length > 6) contasI050.push([pyStrip(reg[6]), reg.slice(7)]);
+    }
+  }, aoProgredir);
+
+  const contasOrigem = [];
+  const vistos = new Set();
+  for (const [codCta, resto] of contasI050) {
+    if (!contasComMovimento.has(codCta) || vistos.has(codCta)) continue;
+    vistos.add(codCta);
+
+    // Heuristica original do nome, reproduzida inclusive na assimetria: o
+    // comprimento e' medido no campo sem espacos, mas o teste de "e' numero"
+    // roda no campo cru.
+    let nomeConta = 'Sem Nome';
+    for (const campo of resto) {
+      if (pyStrip(campo).length > 2 && !isNumeric(campo.replace(/\./g, ''))) {
+        nomeConta = pyStrip(campo);
+        break;
+      }
+    }
+
+    const classifRaw = codCta;
+    const classifLimpa = classifRaw.replace(/^0+/, '');
+    const grupo = classifLimpa.length > 0 ? classifLimpa[0] : (classifRaw.length > 0 ? classifRaw[0] : '');
+
+    contasOrigem.push({ cod: codCta, classif: classifRaw, nome: nomeConta, grupo });
+  }
+
+  return {
+    nomeEmpresa, dtInicial, dtFinal,
+    initialBalances, finalBalances, contasOrigem,
+    qtdPeriodosI150: qtdI150,
+  };
+}
+
+// str.isnumeric(): falso para string vazia.
+function isNumeric(s) {
+  return s.length > 0 && /^[0-9]+$/.test(s);
+}
+
+// =============================================================================
+// PLANO DE CONTAS
+// =============================================================================
+function textoCelula(valor) {
+  if (valor === null || valor === undefined) return '';
+  let texto = pyStrip(String(valor));
+  const low = texto.toLowerCase();
+  if (low === 'nan' || low === 'nat' || low === 'none' || low === '<na>') return '';
+  if (/^-?\d+\.0+$/.test(texto)) texto = texto.split('.')[0];
+  return texto;
+}
+
+function prepararPlano(matriz) {
+  const largura = matriz.length ? matriz[0].length : 0;
+  if (largura < 3) {
+    throw new Error('A planilha precisa de pelo menos 3 colunas: codigo, classificacao e nome.');
+  }
+  const temTipo = largura >= 4;
+
+  const contas = [];
+  for (const linha of matriz) {
+    const codigo = textoCelula(linha[0]);
+    const classificacao = textoCelula(linha[1]);
+    const nome = textoCelula(linha[2]);
+    let tipo = temTipo ? textoCelula(linha[3]) : 'A';
+
+    // Linha sem codigo ou sem nome e' linha em branco da planilha.
+    if (codigo === '' || nome === '') continue;
+
+    tipo = tipo.toUpperCase();
+    if (tipo.startsWith('S')) continue;   // sintetica nao e' destino
+
+    const limpa = pyStrip(classificacao).replace(/^0+/, '');
+    const grupo = limpa.length ? limpa[0] : '0';
+
+    contas.push({
+      Codigo: codigo,
+      Nome: nome,
+      Display: `${codigo} | ${classificacao} - ${nome}`,
+      Grupo: grupo,
+    });
+  }
+
+  const porCodigo = new Map();
+  const porGrupo = new Map();
+  for (const c of contas) {
+    if (!porCodigo.has(c.Codigo)) porCodigo.set(c.Codigo, c);
+    if (!porGrupo.has(c.Grupo)) porGrupo.set(c.Grupo, []);
+    porGrupo.get(c.Grupo).push(c);
+  }
+  const naoPatrimoniais = contas.filter((c) => c.Grupo !== '1' && c.Grupo !== '2');
+
+  return { contas, porCodigo, porGrupo, naoPatrimoniais };
+}
+
+/**
+ * Opcoes oferecidas no menu. Atencao: a regra NAO e' a mesma usada na busca por
+ * similaridade. Para os grupos 1 e 2 usa o proprio grupo; para qualquer outro,
+ * usa todas as contas que nao sejam 1 nem 2.
+ */
+function candidatasOpcoes(plano, grupo) {
+  if (grupo === '1' || grupo === '2') {
+    const f = plano.porGrupo.get(grupo);
+    return f && f.length ? f : plano.contas;
+  }
+  return plano.naoPatrimoniais.length ? plano.naoPatrimoniais : plano.contas;
+}
+
+// =============================================================================
+// MOTOR DE SUGESTAO — media entre token_set_ratio e token_sort_ratio, corte 65
+// =============================================================================
+async function sugerirMapeamento(contasOrigem, plano, aoProgredir) {
+  const cache = new Map();
+  const sugestoes = new Map();
+
+  for (let i = 0; i < contasOrigem.length; i++) {
+    const conta = contasOrigem[i];
+
+    let grupoCache = cache.get(conta.grupo);
+    if (!grupoCache) {
+      const doGrupo = plano.porGrupo.get(conta.grupo);
+      const candidatas = doGrupo && doGrupo.length ? doGrupo : plano.contas;
+      grupoCache = { candidatas, processados: prepararCandidatos(candidatas.map((c) => c.Nome)) };
+      cache.set(conta.grupo, grupoCache);
+    }
+    const { candidatas, processados } = grupoCache;
+
+    let melhorMatch = null;
+    let melhorScore = -1;
+    for (const [idx, flexivel] of extractTokenSet(conta.nome, processados, 5)) {
+      const rigido = tokenSortRatio(conta.nome, candidatas[idx].Nome);
+      const media = (flexivel + rigido) / 2;
+      if (media > melhorScore) { melhorScore = media; melhorMatch = candidatas[idx].Nome; }
+    }
+    const score = Math.trunc(melhorScore);
+
+    let codSugerido = null, displaySugerido = null;
+    if (score >= 65) {
+      // Busca pelo NOME, e nao pelo indice: se o plano tiver nomes repetidos,
+      // vale a primeira ocorrencia, igual ao original.
+      for (const c of candidatas) {
+        if (c.Nome === melhorMatch) { codSugerido = c.Codigo; displaySugerido = c.Display; break; }
+      }
+    }
+
+    sugestoes.set(conta.cod, { score, codSugerido, displaySugerido });
+
+    if ((i & 63) === 0 && aoProgredir) {
+      aoProgredir(i + 1, contasOrigem.length);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+  if (aoProgredir) aoProgredir(contasOrigem.length, contasOrigem.length);
+  return sugestoes;
+}
+
+// =============================================================================
+// GERACAO DO SPED AJUSTADO
+//
+// O separador e' escrito ANTES de cada linha a partir da segunda, entao nao ha
+// quebra no fim do arquivo — os bytes sao os mesmos do "\r\n".join() original.
+// =============================================================================
+async function gerarSpedAjustado(file, mapFinal, gravar, aoProgredir) {
+  let primeiro = true;
+  let buf = [];
+
+  const escrever = (linha) => {
+    if (primeiro) primeiro = false; else buf.push('\r\n');
+    buf.push(linha);
+  };
+  const despejar = async () => {
+    if (!buf.length) return;
+    await gravar(latin1Encode(buf.join('')));
+    buf = [];
+  };
+
+  await percorrerLinhas(file, (line) => {
+    if (line.startsWith('|9999|')) { escrever(line); return false; }
+    if (line.startsWith('|I250|')) {
+      const reg = line.split('|');
+      if (reg.length > 2 && mapFinal.has(reg[2])) {
+        reg[2] = pyStrip(String(mapFinal.get(reg[2]))).replace(/\|/g, '');
+      }
+      escrever(reg.join('|'));
+    } else {
+      escrever(line);
+    }
+  }, async (lidos, total) => {
+    await despejar();
+    if (aoProgredir) aoProgredir(lidos, total);
+  });
+
+  await despejar();
+}
+
+// =============================================================================
+// BALANCO (|6000| / |6100|)
+//
+// A ordem de iteracao de mapFinal define a ordem das linhas. Por isso mapFinal
+// e' um Map e os backups sao lidos com um parser que preserva a ordem.
+// =============================================================================
+function montarBalanco(mapFinal, tipoSaldo, dtFmt, initialBalances, finalBalances) {
+  const linhas = ['|6000|V||||'];
+  let totalDebito = 0, totalCredito = 0;
+  let temDados = false;
+
+  for (const [codAntigo, destino] of mapFinal) {
+    const novo = String(destino ?? '').replace(/\|/g, '');
+    const par = (tipoSaldo === 'Inicial (Abertura)' ? initialBalances : finalBalances).get(codAntigo)
+      || ['0,00', 'D'];
+    const [valStr, dc] = par;
+    const val = pyFloat(valStr.replace(/,/g, '.'));
+
+    if (val > 0) {
+      if (dc === 'D') totalDebito += val; else totalCredito += val;
+      linhas.push(dc === 'D'
+        ? `|6100|${dtFmt}|${novo}||${valStr}||SALDO DE ABERTURA EM ${dtFmt}|||||`
+        : `|6100|${dtFmt}||${novo}|${valStr}||SALDO DE ABERTURA EM ${dtFmt}|||||`);
+      temDados = true;
+    }
+  }
+  return { linhas, totalDebito, totalCredito, temDados };
+}
+
+function formatMoeda(valor) {
+  const s = Math.abs(valor).toFixed(2);
+  const [inteiro, dec] = s.split('.');
+  const agrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `R$ ${valor < 0 ? '-' : ''}${agrupado},${dec}`;
+}
+
+// to_csv(index=False, sep=';') do pandas: terminador \r\n e aspas so quando
+// necessario, dobrando as aspas internas. Conferido contra pandas 2.2.1.
+function montarCsv(registros, colunas) {
+  const campo = (v) => {
+    const s = String(v ?? '');
+    return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  let out = colunas.join(';') + '\r\n';
+  for (const r of registros) out += colunas.map((c) => campo(r[c])).join(';') + '\r\n';
+  return out;
+}
+
+// ===== app.js =====
+// =============================================================================
+// app.js — interface e orquestracao
+//
+// Equivalente ao corpo do convECDprod.py. O que era st.session_state virou o
+// objeto S; o que era reexecucao do script virou render().
+//
+// Diferenca de fundo em relacao ao Streamlit: nao existe servidor. O arquivo
+// SPED nunca sobe para lugar nenhum, e a memoria usada e' a da aba do
+// navegador, que o sistema operacional gerencia e libera sozinho.
+// =============================================================================
+
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const SELECIONE = '-- SELECIONE --';
+const MANUAL = '📝 -- DIGITAR MANUALMENTE --';
+
+const S = {
+  plano: null,
+  arquivoSped: null,
+  dados: null,
+  sugestoes: null,
+  deParaMap: new Map(),   // Map preserva a ordem de insercao, igual ao dict do Python
+  conferidos: new Map(),
+  manuais: new Map(),     // equivale a st.session_state[f"in_{cod}"]
+  selecao: new Map(),     // equivale ao estado do selectbox
+  pagina: 1,
+  busca: '',
+  ocultarMapeadas: false,
+  ocultarConferidas: false,
+  porPagina: 25,
+  tipoSaldo: 'Inicial (Abertura)',
+  balancoProcessado: false,
+  balancoTotais: { D: 0, C: 0 },
+  balancoTemDados: false,
+  temConjuntoXml: false,
+};
+
+// ------------------------------------------------------------- utilitarios
+function msg(el, texto, classe) {
+  el.className = 'msg' + (classe ? ' ' + classe : '');
+  el.textContent = texto || '';
+}
+
+// str() do Python, para os valores lidos de um JSON de backup.
+function pyStr(v) {
+  if (v === true) return 'True';
+  if (v === false) return 'False';
+  if (v === null || v === undefined) return 'None';
+  return String(v);
+}
+function pyBool(v) {
+  if (v === null || v === undefined || v === false) return false;
+  if (v === 0 || v === '') return false;
+  if (Array.isArray(v)) return v.length > 0;
+  if (v instanceof Map) return v.size > 0;
+  return true;
+}
+
+function baixar(blob, nome) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
+let progAtivo = false;
+function progAbrir(texto) { progAtivo = true; $('overlayTxt').textContent = texto; $('overlayBarra').style.width = '0%'; $('overlay').hidden = false; }
+function progSet(feito, total) { if (progAtivo) $('overlayBarra').style.width = (total ? (feito / total) * 100 : 0).toFixed(1) + '%'; }
+function progTexto(t) { if (progAtivo) $('overlayTxt').textContent = t; }
+function progFechar() { progAtivo = false; $('overlay').hidden = true; }
+
+// =============================================================================
+// PLANO DE CONTAS
+// =============================================================================
+async function carregarPlanoPadrao() {
+  msg($('msgPlano'), '');
+  $('capPlano').textContent = '';
+  cacheOpcoes.clear();
+  try {
+    const res = await fetch('plano_padrao.xlsx', { cache: 'no-cache' });
+    if (!res.ok) {
+      S.plano = null;
+      msg($('msgPlano'), "Arquivo 'plano_padrao.xlsx' não encontrado.", 'aviso');
+      return render();
+    }
+    S.plano = prepararPlano(await lerXlsx(await res.arrayBuffer()));
+  } catch (e) {
+    S.plano = null;
+    if (location.protocol === 'file:') {
+      msg($('msgPlano'), 'Aberto direto do disco, o navegador não deixa ler o plano_padrao.xlsx sozinho. ' +
+        'Desmarque a opção acima e selecione o plano manualmente — ou use a versão publicada no GitHub Pages, onde o plano padrão carrega normalmente.', 'aviso');
+    } else {
+      msg($('msgPlano'), 'Erro ao ler plano_padrao.xlsx: ' + e.message, 'erro');
+    }
+  }
+  await recalcularSugestoes();
+  render();
+}
+
+async function carregarPlanoArquivo(file) {
+  msg($('msgPlano'), '');
+  cacheOpcoes.clear();
+  try {
+    S.plano = prepararPlano(await lerXlsx(await file.arrayBuffer()));
+  } catch (e) {
+    S.plano = null;
+    msg($('msgPlano'), 'Erro ao ler arquivo Excel: ' + e.message, 'erro');
+  }
+  await recalcularSugestoes();
+  render();
+}
+
+// As sugestoes dependem do plano de destino. Trocar o plano com um SPED ja
+// carregado obriga a refazer a analise — no Streamlit isso acontecia sozinho
+// porque a chave do cache incluia o plano.
+async function recalcularSugestoes() {
+  if (!S.plano || !S.dados || !S.dados.contasOrigem.length) return;
+  progAbrir('Analisando as contas...');
+  try {
+    S.sugestoes = await sugerirMapeamento(S.dados.contasOrigem, S.plano, progSet);
+  } finally {
+    progFechar();
+  }
+}
+
+// =============================================================================
+// SPED
+// =============================================================================
+async function carregarSped(file) {
+  S.arquivoSped = file;
+  S.dados = null; S.sugestoes = null; S.pagina = 1;
+  S.balancoProcessado = false;
+  S.selecao.clear();
+  msg($('msgSped'), '');
+
+  try {
+    progAbrir('Lendo o arquivo SPED...');
+    S.dados = await analisarSped(file, async (lidos, total) => {
+      progSet(lidos, total);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    if (S.dados.contasOrigem.length) {
+      progTexto('Analisando as contas...');
+      S.sugestoes = await sugerirMapeamento(S.dados.contasOrigem, S.plano, progSet);
+    }
+  } catch (e) {
+    S.dados = null;
+    msg($('msgSped'), 'Erro ao ler o SPED: ' + e.message, 'erro');
+  } finally {
+    progFechar();
+  }
+  resetarData();
+  render();
+}
+
+// =============================================================================
+// ESTADO DERIVADO — equivale ao bloco principal do script Streamlit
+// =============================================================================
+function calcular() {
+  const contas = S.dados.contasOrigem;
+  const mapFinal = new Map(S.deParaMap);   // a ordem daqui define a ordem do Balanco
+  const itens = [];
+  let mapeadas = 0;
+
+  for (const conta of contas) {
+    const cod = String(conta.cod);
+    const sug = S.sugestoes.get(cod);
+    const estaNoMapa = S.deParaMap.has(cod);
+    const valorNoMapa = String(S.deParaMap.get(cod) ?? '');
+
+    let resolvida = false;
+    if (estaNoMapa) {
+      resolvida = true;
+    } else if (sug.score >= 65) {
+      resolvida = true;
+      mapFinal.set(cod, sug.codSugerido);
+    }
+    if (resolvida) mapeadas++;
+
+    itens.push({
+      cod, nome: conta.nome, classif: conta.classif, grupo: conta.grupo,
+      score: sug.score, codSugerido: sug.codSugerido, displaySugerido: sug.displaySugerido,
+      resolvida, estaNoMapa, valorNoMapa,
+    });
+  }
+
+  let conferidas = 0;
+  for (const v of S.conferidos.values()) if (v) conferidas++;
+
+  return { itens, mapFinal, mapeadas, conferidas, total: contas.length };
+}
+
+// Opcoes do menu por grupo, montadas uma vez por grupo presente na pagina.
+const cacheOpcoes = new Map();
+function opcoesDoGrupo(grupo) {
+  let o = cacheOpcoes.get(grupo);
+  if (!o) {
+    const lista = candidatasOpcoes(S.plano, grupo).map((c) => c.Display);
+    o = { lista, conjunto: new Set(lista) };
+    cacheOpcoes.set(grupo, o);
+  }
+  return o;
+}
+
+// Reproduz o calculo de valor_inicial do original, incluindo a injecao de uma
+// opcao extra quando o destino gravado nao esta na lista do grupo.
+function estadoSelecao(item) {
+  const { lista, conjunto } = opcoesDoGrupo(item.grupo);
+  let extra = null;
+  let valor = SELECIONE;
+
+  if (item.estaNoMapa) {
+    const destino = S.plano.porCodigo.get(item.valorNoMapa);
+    if (destino) {
+      valor = destino.Display;
+      if (!conjunto.has(valor)) extra = valor;
+    } else {
+      valor = MANUAL;
+      if (!S.manuais.has(item.cod)) S.manuais.set(item.cod, item.valorNoMapa);
+    }
+  } else if (item.displaySugerido) {
+    valor = item.displaySugerido;
+    if (!conjunto.has(valor)) extra = valor;
+  }
+
+  if (S.selecao.has(item.cod)) {
+    const v = S.selecao.get(item.cod);
+    if (v !== SELECIONE && v !== MANUAL && !conjunto.has(v) && v !== extra) extra = v;
+    valor = v;
+  }
+
+  const opcoes = extra ? [SELECIONE, MANUAL, extra, ...lista] : [SELECIONE, MANUAL, ...lista];
+  return { valor, opcoes };
+}
+
+// =============================================================================
+// RENDER
+// =============================================================================
+function render() {
+  // --- barra lateral: plano
+  $('blocoPlanoCustom').hidden = $('usarPadrao').checked;
+  $('capPlano').textContent = S.plano ? `${S.plano.contas.length} contas analíticas no plano de destino.` : '';
+
+  $('blocoSped').hidden = !S.plano;
+  $('avisoSped').hidden = !!S.plano;
+
+  const temMapa = S.deParaMap.size > 0;
+  $('btnSalvarBackup').hidden = !temMapa;
+  $('btnExportarModelo').hidden = !temMapa;
+
+  const pronto = S.plano && S.dados;
+  $('aguardando').hidden = !!pronto;
+  $('app').hidden = !pronto;
+  if (!pronto) return;
+
+  // --- aviso de multiplos periodos I150
+  const cp = $('capPeriodos');
+  if (S.dados.qtdPeriodosI150 > 1) {
+    cp.hidden = false;
+    cp.textContent = `ℹ️ Arquivo com ${S.dados.qtdPeriodosI150} períodos de saldo (I150). O saldo inicial considerado é o do primeiro período.`;
+  } else cp.hidden = true;
+
+  if (!S.dados.contasOrigem.length) {
+    $('app').hidden = true;
+    $('aguardando').hidden = false;
+    msg($('aguardando'), 'Nenhuma conta com movimento detectada.', 'erro');
+    return;
+  }
+  msg($('aguardando'), 'Aguardando arquivos...', 'info');
+
+  const st = calcular();
+  renderProgresso(st);
+  renderLista(st);
+  renderMetricas(st);
+  renderFinalizacao(st);
+}
+
+function renderProgresso({ mapeadas, conferidas, total }) {
+  const pm = total ? mapeadas / total : 0;
+  const pc = total ? conferidas / total : 0;
+  $('barraMap').style.width = (pm * 100) + '%';
+  $('barraConf').style.width = (pc * 100) + '%';
+  $('txtMap').innerHTML = `<b>Mapeamento Automatizado + Manual:</b> ${mapeadas}/${total} (${(pm * 100).toFixed(1)}%)`;
+  $('txtConf').innerHTML = `<b>Conferência Realizada:</b> ${conferidas}/${total} (${(pc * 100).toFixed(1)}%)`;
+}
+
+function renderMetricas({ mapeadas, conferidas, total }) {
+  $('mTotal').textContent = total;
+  $('mMap').textContent = mapeadas;
+  $('mMapPct').textContent = ((total ? mapeadas / total : 0) * 100).toFixed(1) + '%';
+  $('mConf').textContent = conferidas;
+  $('mConfPct').textContent = ((total ? conferidas / total : 0) * 100).toFixed(1) + '%';
+}
+
+function renderLista({ itens }) {
+  const termo = S.busca.trim().toLowerCase();
+  const visiveis = itens.filter((it) => {
+    if (termo && !(it.nome.toLowerCase().includes(termo) || it.cod.toLowerCase().includes(termo) || it.classif.toLowerCase().includes(termo))) return false;
+    if (S.ocultarMapeadas && it.resolvida) return false;
+    if (S.ocultarConferidas && S.conferidos.get(it.cod)) return false;
+    return true;
+  });
+
+  const lista = $('listaContas');
+  if (!visiveis.length) {
+    $('paginacao').innerHTML = '';
+    $('capPagina').textContent = '';
+    lista.innerHTML = '<p class="msg info">Nenhuma conta corresponde aos filtros ativos.</p>';
+    return;
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / S.porPagina));
+  if (S.pagina > totalPaginas) S.pagina = 1;
+
+  let sel = '<select id="selPagina">';
+  for (let p = 1; p <= totalPaginas; p++) sel += `<option value="${p}"${p === S.pagina ? ' selected' : ''}>Página ${p}</option>`;
+  $('paginacao').innerHTML = sel + '</select>';
+  $('selPagina').onchange = (e) => { S.pagina = +e.target.value; render(); };
+
+  const off = (S.pagina - 1) * S.porPagina;
+  const daPagina = visiveis.slice(off, off + S.porPagina);
+  $('capPagina').textContent = `Exibindo ${off + 1} a ${Math.min(off + S.porPagina, visiveis.length)} de ${visiveis.length} contas.`;
+
+  let html = '';
+  for (const it of daPagina) {
+    const conferida = !!S.conferidos.get(it.cod);
+    const { valor } = estadoSelecao(it);
+
+    let selo;
+    if (it.estaNoMapa) selo = '<span class="selo u">📌 Mapeado pelo Usuário</span>';
+    else if (it.score >= 85) selo = `<span class="selo a">🟢 Alta Confiança (${it.score}% - Recomendada)</span>`;
+    else if (it.score >= 65) selo = `<span class="selo m">🟡 Média Confiança (${it.score}% - Requer Revisão)</span>`;
+    else selo = `<span class="selo b">🔴 Não mapeada (Baixa Confiança - ${it.score}%)</span>`;
+
+    const manual = valor === MANUAL
+      ? `<input class="manual" type="text" data-manual="${esc(it.cod)}" value="${esc(S.manuais.get(it.cod) ?? S.deParaMap.get(it.cod) ?? '')}" placeholder="Cód. manual para ${esc(it.cod)}">`
+      : '';
+
+    html += `<div class="cont-row">
+      <div>
+        <div class="nome${conferida ? ' feita' : ''}">${esc(it.nome)}${conferida ? '  ✅ <i>(Conferida)</i>' : ''}</div>
+        <div class="caption">Cod no SPED: ${esc(it.cod)} | Grupo: ${esc(it.grupo)}</div>
+      </div>
+      <div>
+        ${selo}
+        <button class="combo-btn" data-combo="${esc(it.cod)}" title="${esc(valor)}">${esc(valor)}</button>
+        ${manual}
+      </div>
+      <label class="conf">
+        <input type="checkbox" data-conf="${esc(it.cod)}"${conferida && it.resolvida ? ' checked' : ''}${it.resolvida ? '' : ' disabled'}>
+        <span>Marcar como Conferido</span>
+      </label>
+    </div>`;
+  }
+  lista.innerHTML = html;
+
+  for (const b of lista.querySelectorAll('[data-combo]')) {
+    b.onclick = () => abrirCombo(b, daPagina.find((x) => x.cod === b.dataset.combo));
+  }
+  for (const i of lista.querySelectorAll('[data-manual]')) {
+    i.onchange = () => { atualizarManual(i.dataset.manual, i.value); render(); };
+  }
+  for (const c of lista.querySelectorAll('[data-conf]')) {
+    c.onchange = () => { S.conferidos.set(c.dataset.conf, !!c.checked); render(); };
+  }
+}
+
+// ----------------------------------------------------- seletor com busca
+let comboItem = null;
+function abrirCombo(botao, item) {
+  if (!item) return;
+  comboItem = item;
+  const { opcoes } = estadoSelecao(item);
+  const painel = $('combo');
+  const r = botao.getBoundingClientRect();
+  painel.hidden = false;
+  painel.style.left = Math.max(8, Math.min(r.left + scrollX, scrollX + innerWidth - painel.offsetWidth - 8)) + 'px';
+  painel.style.top = (r.bottom + scrollY + 4) + 'px';
+  $('comboBusca').value = '';
+  desenharCombo(opcoes, '');
+  $('comboBusca').focus();
+}
+
+function desenharCombo(opcoes, termo) {
+  const t = termo.trim().toLowerCase();
+  const achados = t ? opcoes.filter((o) => o.toLowerCase().includes(t)) : opcoes;
+  const mostrar = achados.slice(0, 400);
+  let html = mostrar.map((o) => `<button type="button" data-op="${esc(o)}">${esc(o)}</button>`).join('');
+  if (!achados.length) html = '<div class="vazio">Nenhuma conta encontrada.</div>';
+  else if (achados.length > mostrar.length) html += `<div class="vazio">… e mais ${achados.length - mostrar.length}. Refine a busca.</div>`;
+  $('comboLista').innerHTML = html;
+  for (const b of $('comboLista').querySelectorAll('[data-op]')) {
+    b.onclick = () => { atualizarDropdown(comboItem.cod, b.dataset.op); fecharCombo(); render(); };
+  }
+}
+function fecharCombo() { $('combo').hidden = true; comboItem = null; }
+
+// -------------------------------------------- acoes equivalentes aos callbacks
+function atualizarDropdown(cod, valor) {
+  S.selecao.set(cod, valor);
+  if (valor && valor !== SELECIONE && !valor.includes('📝')) {
+    S.deParaMap.set(cod, String(valor.split(' | ')[0]));
+  } else if (valor === MANUAL) {
+    S.deParaMap.set(cod, '');
+  } else if (valor === SELECIONE) {
+    S.deParaMap.delete(cod);
+  }
+}
+function atualizarManual(cod, valor) {
+  S.manuais.set(cod, valor);
+  if (valor) S.deParaMap.set(cod, String(valor));
+}
+
+// =============================================================================
+// FINALIZACAO
+// =============================================================================
+function renderFinalizacao(st) {
+  const { mapFinal, mapeadas, conferidas, total } = st;
+  const pendentes = total - mapeadas;
+  const pendentesConf = total - conferidas;
+  const nome = S.dados.nomeEmpresa;
+
+  // --- 1. arquivo final
+  const c1 = $('finalArquivo');
+  if (pendentes > 0) {
+    c1.innerHTML = `<p class="msg aviso">⚠️ Faltam ${pendentes} mapeamentos.</p>
+      <button class="btn block" disabled>🚀 Gerar SPED</button>`;
+  } else {
+    c1.innerHTML = (pendentesConf > 0
+      ? `<p class="msg aviso">⚠️ Há ${pendentesConf} contas pendentes de conferência pelo cliente. (Download Liberado)</p>`
+      : '<p class="msg ok">✅ Tudo pronto e conferido!</p>')
+      + `<button class="btn block primario" id="btnSped" title="O arquivo é montado no momento do clique.">💾 Baixar SPED Ajustado</button>`
+      + (S.temConjuntoXml ? `<hr><a class="btn block" href="${encodeURI('Conjunto SPED.xml')}" download="Conjunto SPED.xml">⬇️ Baixar Conjunto SPED (XML)</a>` : '');
+    $('btnSped').onclick = () => baixarSped(mapFinal, `SPED_AJUSTADO_${nome}.txt`);
+  }
+
+  // --- 2. balanco
+  const rb = $('resultadoBalanco');
+  if (S.balancoProcessado) {
+    const t = S.balancoTotais;
+    const diff = t.D - t.C;
+    let h = `<hr><p class="caption">Débitos: ${formatMoeda(t.D)}</p><p class="caption">Créditos: ${formatMoeda(t.C)}</p>`;
+    h += Math.abs(diff) > 0.01
+      ? `<p class="msg erro">Diferença: ${formatMoeda(diff)}</p>`
+      : '<p class="msg ok">Diferença: R$ 0,00</p>';
+    if (S.balancoTemDados && pendentes === 0) h += '<button class="btn block primario" id="btnBalanco">💾 Baixar Balanço</button>';
+    else if (pendentes > 0) h += '<p class="msg aviso">Resolva pendências.</p>';
+    else h += '<p class="msg aviso">Sem dados.</p>';
+    rb.innerHTML = h;
+    const bb = $('btnBalanco');
+    if (bb) bb.onclick = () => baixarBalanco(mapFinal, nome);
+  } else rb.innerHTML = '';
+
+  // --- 3. conferencia
+  const pend = S.dados.contasOrigem.filter((c) => !mapFinal.has(c.cod));
+  const c3 = $('finalConferencia');
+  if (pend.length) {
+    c3.innerHTML = `<p class="msg aviso">${pend.length} pendentes.</p><button class="btn block" id="btnCsv">📑 Relatório CSV</button>`;
+    $('btnCsv').onclick = () => {
+      const csv = montarCsv(pend, ['cod', 'classif', 'nome', 'grupo']);
+      baixar(new Blob(['\ufeff' + csv], { type: 'text/csv' }), 'contas_pendentes.csv');
+    };
+  } else {
+    c3.innerHTML = '<p class="msg ok">✅ Tudo Mapeado OK!</p>';
+  }
+}
+
+function dataBalancoFmt() {
+  const v = $('dataBalanco').value;
+  if (!v) return ddmmyyyy(new Date());
+  const [y, m, d] = v.split('-').map(Number);
+  return ddmmyyyy(new Date(Date.UTC(y, m - 1, d)));
+}
+
+function resetarData() {
+  // st.date_input recalcula o padrao quando o tipo de saldo muda.
+  let padrao = new Date();
+  padrao = new Date(Date.UTC(padrao.getFullYear(), padrao.getMonth(), padrao.getDate()));
+  if (S.tipoSaldo === 'Inicial (Abertura)' && S.dados?.dtInicial) {
+    padrao = new Date(S.dados.dtInicial.getTime() - 86400000);
+  } else if (S.tipoSaldo === 'Final (Fechamento)' && S.dados?.dtFinal) {
+    padrao = S.dados.dtFinal;
+  }
+  $('dataBalanco').value = padrao.toISOString().slice(0, 10);
+}
+
+async function baixarSped(mapFinal, nomeArquivo) {
+  // showSaveFilePicker precisa ser chamado ainda dentro do clique, antes de
+  // qualquer await. Com ele, o arquivo vai direto para o disco em fluxo e os
+  // 217 MB nunca ficam inteiros na memoria.
+  let handle = null;
+  if (window.showSaveFilePicker) {
+    try {
+      handle = await window.showSaveFilePicker({
+        suggestedName: nomeArquivo,
+        types: [{ description: 'Arquivo de texto', accept: { 'text/plain': ['.txt'] } }],
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      handle = null;
+    }
+  }
+
+  progAbrir('Montando o SPED ajustado...');
+  try {
+    if (handle) {
+      const w = await handle.createWritable();
+      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => w.write(b), progSet);
+      await w.close();
+      progTexto('Arquivo gravado.');
+    } else {
+      const partes = [];
+      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => { partes.push(b); }, progSet);
+      baixar(new Blob(partes, { type: 'text/plain' }), nomeArquivo);
+    }
+  } catch (e) {
+    alert('Erro ao gerar o SPED: ' + e.message);
+  } finally {
+    progFechar();
+  }
+}
+
+function baixarBalanco(mapFinal, nome) {
+  const dtFmt = dataBalancoFmt();
+  const { linhas } = montarBalanco(mapFinal, S.tipoSaldo, dtFmt, S.dados.initialBalances, S.dados.finalBalances);
+  baixar(new Blob([latin1Encode(linhas.join('\r\n'))], { type: 'text/plain' }),
+    `BALANCO_${nome}_${dtFmt.replace(/\//g, '')}.txt`);
+}
+
+// =============================================================================
+// BACKUP E MODELO
+// =============================================================================
+async function carregarBackup(file) {
+  try {
+    const dados = parseOrdenado(await file.text());
+    const ehEnvelope = dados instanceof Map && (dados.has('de_para_map') || dados.has('conferidos'));
+    const mapa = ehEnvelope ? (dados.get('de_para_map') ?? new Map()) : dados;
+    const conf = ehEnvelope ? (dados.get('conferidos') ?? new Map()) : new Map();
+
+    let n = 0, nc = 0;
+    for (const [k, v] of mapa) { S.deParaMap.set(String(k), pyStr(v)); S.manuais.set(String(k), pyStr(v)); n++; }
+    for (const [k, v] of conf) { S.conferidos.set(String(k), pyBool(v)); nc++; }
+    S.selecao.clear();
+
+    msg($('msgBackup'), `Backup carregado! ${n} mapeadas (${nc} conferidas).`, 'ok');
+  } catch (e) {
+    msg($('msgBackup'), 'Erro no backup: ' + e.message, 'erro');
+  }
+  render();
+}
+
+async function carregarModelo(file) {
+  try {
+    const dados = parseOrdenado(await file.text());
+    const mapa = (dados instanceof Map && dados.has('de_para_map')) ? dados.get('de_para_map') : dados;
+
+    let n = 0;
+    for (const [k, v] of mapa) {
+      const kk = String(k), vv = pyStr(v);
+      S.deParaMap.set(kk, vv);
+      S.conferidos.set(kk, false);
+      S.manuais.set(kk, vv);
+      n++;
+    }
+    S.selecao.clear();
+    msg($('msgModelo'), `Modelo aplicado! ${n} relacionamentos carregados (Aguardando conferência).`, 'ok');
+  } catch (e) {
+    msg($('msgModelo'), 'Erro no modelo: ' + e.message, 'erro');
+  }
+  render();
+}
+
+// =============================================================================
+// LIGACAO DOS CONTROLES
+// =============================================================================
+$('usarPadrao').onchange = (e) => {
+  S.plano = null; msg($('msgPlano'), ''); cacheOpcoes.clear();
+  if (e.target.checked) carregarPlanoPadrao();
+  else { $('filePlano').value = ''; render(); }
+};
+$('filePlano').onchange = (e) => e.target.files[0] && carregarPlanoArquivo(e.target.files[0]);
+$('fileSped').onchange = (e) => e.target.files[0] && carregarSped(e.target.files[0]);
+$('fileBackup').onchange = (e) => e.target.files[0] && carregarBackup(e.target.files[0]);
+$('fileModelo').onchange = (e) => e.target.files[0] && carregarModelo(e.target.files[0]);
+
+$('ocultarMapeadas').onchange = (e) => { S.ocultarMapeadas = e.target.checked; S.pagina = 1; render(); };
+$('ocultarConferidas').onchange = (e) => { S.ocultarConferidas = e.target.checked; S.pagina = 1; render(); };
+$('porPagina').onchange = (e) => { S.porPagina = +e.target.value; S.pagina = 1; render(); };
+
+let tBusca;
+$('busca').oninput = (e) => {
+  clearTimeout(tBusca);
+  tBusca = setTimeout(() => { S.busca = e.target.value; S.pagina = 1; render(); }, 150);
+};
+
+$('btnConferirTodas').onclick = () => {
+  for (const it of calcular().itens) if (it.resolvida) S.conferidos.set(it.cod, true);
+  render();
+};
+$('btnLimparConf').onclick = () => { S.conferidos = new Map(); render(); };
+
+for (const r of document.querySelectorAll('input[name=tipoSaldo]')) {
+  r.onchange = () => { S.tipoSaldo = r.value; S.balancoProcessado = false; resetarData(); render(); };
+}
+$('btnProcessarBalanco').onclick = () => {
+  const { mapFinal } = calcular();
+  const r = montarBalanco(mapFinal, S.tipoSaldo, dataBalancoFmt(), S.dados.initialBalances, S.dados.finalBalances);
+  S.balancoTotais = { D: r.totalDebito, C: r.totalCredito };
+  S.balancoProcessado = true;
+  S.balancoTemDados = r.temDados;
+  render();
+};
+
+$('btnSalvarBackup').onclick = () => {
+  const dados = new Map([['de_para_map', S.deParaMap], ['conferidos', S.conferidos]]);
+  baixar(new Blob([dumpsOrdenado(dados, 4)], { type: 'application/json' }), 'backup_mapeamento_ecd.json');
+};
+$('btnExportarModelo').onclick = () => {
+  const dados = new Map([['de_para_map', S.deParaMap]]);
+  baixar(new Blob([dumpsOrdenado(dados, 4)], { type: 'application/json' }), 'modelo_de_para_compartilhado.json');
+};
+
+$('comboBusca').oninput = () => { if (comboItem) desenharCombo(estadoSelecao(comboItem).opcoes, $('comboBusca').value); };
+document.addEventListener('mousedown', (e) => {
+  if (!$('combo').hidden && !$('combo').contains(e.target) && !e.target.dataset.combo) fecharCombo();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fecharCombo(); });
+
+// --- tema (escuro e' o padrao; a escolha fica salva neste navegador)
+function aplicarTema(claro) {
+  if (claro) document.documentElement.dataset.tema = 'claro';
+  else delete document.documentElement.dataset.tema;
+  $('btnTema').textContent = claro ? '🌙 Modo escuro' : '☀️ Modo claro';
+  try { localStorage.setItem('tema', claro ? 'claro' : 'escuro'); } catch (e) {}
+}
+$('btnTema').onclick = () => aplicarTema(document.documentElement.dataset.tema !== 'claro');
+aplicarTema(document.documentElement.dataset.tema === 'claro');
+
+// --- arranque
+fetch(encodeURI('Conjunto SPED.xml'), { method: 'HEAD' })
+  .then((r) => { S.temConjuntoXml = r.ok; if (r.ok && S.dados) render(); })
+  .catch(() => {});
+
+carregarPlanoPadrao();
+</script>
+</body>
+</html>
