@@ -250,7 +250,7 @@ table.modelo th,table.modelo td{border:1px solid var(--linha);padding:.28rem .35
 
     <hr>
     <h3>🔗 Mapeamento de Contas</h3>
-    <label class="lbl" for="busca">🔍 Buscar conta por nome ou código do SPED:</label>
+    <label class="lbl" for="busca">🔍 Buscar conta por nome, código do SPED ou conta superior:</label>
     <input type="text" id="busca" autocomplete="off">
 
     <div id="paginacao" class="paginacao"></div>
@@ -1037,22 +1037,21 @@ async function analisarSped(file, aoProgredir) {
     }
   }, aoProgredir);
 
+  // Hierarquia completa do plano de origem (inclui contas sinteticas e sem
+  // movimento): codigo -> { sup, nome }. Serve para descobrir o grupo real
+  // quando o COD_CTA e' codigo reduzido e nao a classificacao.
+  const hierarquia = new Map();
+  for (const [codCta, resto] of contasI050) {
+    if (!hierarquia.has(codCta)) hierarquia.set(codCta, { sup: pyStrip(resto[0] ?? ''), nome: nomeI050(resto) });
+  }
+
   const contasOrigem = [];
   const vistos = new Set();
   for (const [codCta, resto] of contasI050) {
     if (!contasComMovimento.has(codCta) || vistos.has(codCta)) continue;
     vistos.add(codCta);
 
-    // Heuristica original do nome, reproduzida inclusive na assimetria: o
-    // comprimento e' medido no campo sem espacos, mas o teste de "e' numero"
-    // roda no campo cru.
-    let nomeConta = 'Sem Nome';
-    for (const campo of resto) {
-      if (pyStrip(campo).length > 2 && !isNumeric(campo.replace(/\./g, ''))) {
-        nomeConta = pyStrip(campo);
-        break;
-      }
-    }
+    const nomeConta = nomeI050(resto);
 
     const classifRaw = codCta;
     const classifLimpa = classifRaw.replace(/^0+/, '');
@@ -1063,9 +1062,111 @@ async function analisarSped(file, aoProgredir) {
 
   return {
     nomeEmpresa, dtInicial, dtFinal,
-    initialBalances, finalBalances, contasOrigem,
+    initialBalances, finalBalances, contasOrigem, hierarquia,
     qtdPeriodosI150: qtdI150,
   };
+}
+
+// Heuristica original do nome, reproduzida inclusive na assimetria: o
+// comprimento e' medido no campo sem espacos, mas o teste de "e' numero"
+// roda no campo cru.
+function nomeI050(resto) {
+  for (const campo of resto) {
+    if (pyStrip(campo).length > 2 && !isNumeric(campo.replace(/\./g, ''))) return pyStrip(campo);
+  }
+  return 'Sem Nome';
+}
+
+// =============================================================================
+// GRUPO PELA HIERARQUIA
+//
+// A regra original tira o grupo do 1o digito do COD_CTA. Isso so' funciona
+// quando o COD_CTA e' a classificacao (1.01.01...). Em SPED gerado pelo
+// Dominio o COD_CTA e' o codigo REDUZIDO: "432 JUROS DE APLICACOES" e' grupo 3,
+// nao 4, e o fornecedor "10011" e' grupo 2, nao 1.
+//
+// Quando o arquivo usa codigo reduzido, sobe pela conta superior do I050 ate
+// achar uma conta que exista no plano de destino com o MESMO codigo e nome
+// compativel, e usa a classificacao dela. Exigir nome compativel importa: no
+// caso real, o codigo 539 era "BANCO MERCADO PAGO" na origem e "BANCO
+// SANTANDER" no destino.
+//
+// Arquivo com codigo em forma de classificacao continua com a regra original,
+// sem nenhuma mudanca.
+// =============================================================================
+function codigosSaoReduzidos(hierarquia) {
+  let comSup = 0, encaixados = 0;
+  for (const [cod, h] of hierarquia) {
+    if (!h.sup) continue;
+    comSup++;
+    const a = cod.replace(/\./g, ''), b = h.sup.replace(/\./g, '');
+    if (a.length > b.length && a.startsWith(b)) encaixados++;
+  }
+  return comSup > 0 && encaixados / comSup < 0.5;
+}
+
+const notaNomes = (a, b) => (tokenSetRatio(a, b) + tokenSortRatio(a, b)) / 2;
+
+function resolverGrupos(dados, plano) {
+  const hier = dados.hierarquia;
+  const reduzido = codigosSaoReduzidos(hier);
+  dados.codigosReduzidos = reduzido;
+
+  // Raizes do destino (classificacao de um digito), para o caso de nenhum
+  // codigo coincidir: casa pelo nome da raiz (ATIVO, PASSIVO, RECEITAS...).
+  const raizesDestino = [];
+  for (const d of plano.todasPorCodigo.values()) {
+    if (d.Classificacao.replace(/[.\s]/g, '').replace(/^0+/, '').length === 1) raizesDestino.push(d);
+  }
+
+  for (const conta of dados.contasOrigem) {
+    if (conta.grupoOriginal === undefined) conta.grupoOriginal = conta.grupo;
+    conta.grupo = conta.grupoOriginal;
+    conta.ancora = null;
+    const h = hier.get(conta.cod);
+    conta.superior = h && h.sup && hier.has(h.sup) ? { cod: h.sup, nome: hier.get(h.sup).nome } : null;
+    if (!reduzido) continue;
+
+    const vistos = new Set();
+    let c = conta.cod, propria = true, achou = false, raiz = null;
+    while (c && !vistos.has(c) && hier.has(c)) {
+      vistos.add(c);
+      const o = hier.get(c), d = plano.todasPorCodigo.get(c);
+      if (d && notaNomes(o.nome, d.Nome) >= 65) {
+        conta.grupo = d.Grupo;
+        if (!propria) conta.ancora = d;
+        achou = true;
+        break;
+      }
+      raiz = o;
+      propria = false;
+      c = o.sup;
+    }
+
+    if (!achou && raiz && raizesDestino.length) {
+      let melhor = null, nota = -1;
+      for (const d of raizesDestino) {
+        const n = notaNomes(raiz.nome, d.Nome);
+        if (n > nota) { nota = n; melhor = d; }
+      }
+      if (melhor && nota >= 65) conta.grupo = melhor.Grupo;
+    }
+  }
+}
+
+// Contas analiticas do destino que ficam debaixo da conta "ancora" (a conta
+// superior equivalente). Aparecem primeiro no menu: para os 99 fornecedores
+// do caso real, a primeira opcao passa a ser "10001 | 21301000001 - FORNECEDORES".
+const cacheIrmas = new Map();
+function contasSobAncora(plano, ancora) {
+  if (!ancora) return [];
+  let r = cacheIrmas.get(ancora.Codigo);
+  if (!r) {
+    const cl = ancora.Classificacao;
+    r = cl ? plano.contas.filter((c) => c.Classificacao !== cl && c.Classificacao.startsWith(cl)).map((c) => c.Display) : [];
+    cacheIrmas.set(ancora.Codigo, r);
+  }
+  return r;
 }
 
 // str.isnumeric(): falso para string vazia.
@@ -1093,6 +1194,7 @@ function prepararPlano(matriz) {
   const temTipo = largura >= 4;
 
   const contas = [];
+  const todasPorCodigo = new Map();   // inclui sinteticas: usado so' para achar o grupo
   for (const linha of matriz) {
     const codigo = textoCelula(linha[0]);
     const classificacao = textoCelula(linha[1]);
@@ -1101,18 +1203,24 @@ function prepararPlano(matriz) {
 
     // Linha sem codigo ou sem nome e' linha em branco da planilha.
     if (codigo === '' || nome === '') continue;
-
-    tipo = tipo.toUpperCase();
-    if (tipo.startsWith('S')) continue;   // sintetica nao e' destino
+    // Linha de cabecalho ("codigo_conta", "Codigo"...): codigo sem nenhum digito.
+    if (!/\d/.test(codigo)) continue;
 
     const limpa = pyStrip(classificacao).replace(/^0+/, '');
     const grupo = limpa.length ? limpa[0] : '0';
+    if (!todasPorCodigo.has(codigo)) {
+      todasPorCodigo.set(codigo, { Codigo: codigo, Nome: nome, Classificacao: pyStrip(classificacao), Grupo: grupo });
+    }
+
+    tipo = tipo.toUpperCase();
+    if (tipo.startsWith('S')) continue;   // sintetica nao e' destino
 
     contas.push({
       Codigo: codigo,
       Nome: nome,
       Display: `${codigo} | ${classificacao} - ${nome}`,
       Grupo: grupo,
+      Classificacao: pyStrip(classificacao),
     });
   }
 
@@ -1125,7 +1233,7 @@ function prepararPlano(matriz) {
   }
   const naoPatrimoniais = contas.filter((c) => c.Grupo !== '1' && c.Grupo !== '2');
 
-  return { contas, porCodigo, porGrupo, naoPatrimoniais };
+  return { contas, porCodigo, porGrupo, naoPatrimoniais, todasPorCodigo };
 }
 
 /**
@@ -1399,6 +1507,8 @@ async function recalcularSugestoes() {
   if (!S.plano || !S.dados || !S.dados.contasOrigem.length) return;
   progAbrir('Analisando as contas...');
   try {
+    cacheIrmas.clear();
+    resolverGrupos(S.dados, S.plano);
     S.sugestoes = await sugerirMapeamento(S.dados.contasOrigem, S.plano, progSet);
   } finally {
     progFechar();
@@ -1424,6 +1534,8 @@ async function carregarSped(file) {
 
     if (S.dados.contasOrigem.length) {
       progTexto('Analisando as contas...');
+      cacheIrmas.clear();
+      resolverGrupos(S.dados, S.plano);
       S.sugestoes = await sugerirMapeamento(S.dados.contasOrigem, S.plano, progSet);
     }
   } catch (e) {
@@ -1462,6 +1574,7 @@ function calcular() {
 
     itens.push({
       cod, nome: conta.nome, classif: conta.classif, grupo: conta.grupo,
+      superior: conta.superior, ancora: conta.ancora,
       score: sug.score, codSugerido: sug.codSugerido, displaySugerido: sug.displaySugerido,
       resolvida, estaNoMapa, valorNoMapa,
     });
@@ -1512,7 +1625,11 @@ function estadoSelecao(item) {
     valor = v;
   }
 
-  const opcoes = extra ? [SELECIONE, MANUAL, extra, ...lista] : [SELECIONE, MANUAL, ...lista];
+  // Contas debaixo da conta superior equivalente vem primeiro no menu.
+  const preferidas = contasSobAncora(S.plano, item.ancora).filter((d) => d !== extra);
+  let resto = lista;
+  if (preferidas.length) { const p = new Set(preferidas); resto = lista.filter((d) => !p.has(d)); }
+  const opcoes = extra ? [SELECIONE, MANUAL, extra, ...preferidas, ...resto] : [SELECIONE, MANUAL, ...preferidas, ...resto];
   return { valor, opcoes };
 }
 
@@ -1578,7 +1695,8 @@ function renderMetricas({ mapeadas, conferidas, total }) {
 function renderLista({ itens }) {
   const termo = S.busca.trim().toLowerCase();
   const visiveis = itens.filter((it) => {
-    if (termo && !(it.nome.toLowerCase().includes(termo) || it.cod.toLowerCase().includes(termo) || it.classif.toLowerCase().includes(termo))) return false;
+    if (termo && !(it.nome.toLowerCase().includes(termo) || it.cod.toLowerCase().includes(termo) || it.classif.toLowerCase().includes(termo)
+      || (it.superior && it.superior.nome.toLowerCase().includes(termo)))) return false;
     if (S.ocultarMapeadas && it.resolvida) return false;
     if (S.ocultarConferidas && S.conferidos.get(it.cod)) return false;
     return true;
@@ -1622,7 +1740,7 @@ function renderLista({ itens }) {
     html += `<div class="cont-row">
       <div>
         <div class="nome${conferida ? ' feita' : ''}">${esc(it.nome)}${conferida ? '  ✅ <i>(Conferida)</i>' : ''}</div>
-        <div class="caption">Cod no SPED: ${esc(it.cod)} | Grupo: ${esc(it.grupo)}</div>
+        <div class="caption">Cod no SPED: ${esc(it.cod)} | Grupo: ${esc(it.grupo)}${it.superior ? ` | Superior: ${esc(it.superior.cod)} - ${esc(it.superior.nome)}` : ''}</div>
       </div>
       <div>
         ${selo}
