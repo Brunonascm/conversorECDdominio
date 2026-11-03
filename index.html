@@ -270,6 +270,10 @@ table.modelo th,table.modelo td{border:1px solid var(--linha);padding:.28rem .35
 
       <div class="col">
         <p><b>1. Arquivo Final</b></p>
+        <div id="blocoHist" hidden>
+          <label class="chk"><input type="checkbox" id="preencherHist" checked> Preencher histórico vazio com o histórico padrão (I075)</label>
+          <p class="caption" id="capHist"></p>
+        </div>
         <div id="finalArquivo"></div>
       </div>
 
@@ -999,6 +1003,8 @@ async function analisarSped(file, aoProgredir) {
   const finalBalances = new Map();
   const contasComMovimento = new Set();
   const contasI050 = [];
+  const historicos = new Map();       // I075: codigo do historico padrao -> texto
+  const semHistorico = new Map();     // I250 sem historico: codigo informado -> qtd
   let qtdI150 = 0;
   let achou0000 = false;
 
@@ -1031,6 +1037,18 @@ async function analisarSped(file, aoProgredir) {
     } else if (line.startsWith('|I250|')) {
       const reg = line.split('|');
       if (reg.length > 2) contasComMovimento.add(pyStrip(reg[2]));
+      // |I250|COD_CTA|COD_CCUS|VL_DC|IND_DC|NUM_ARQ|COD_HIST_PAD|HIST|COD_PART|
+      if (reg.length > 8 && pyStrip(reg[8]) === '') {
+        const ch = pyStrip(reg[7]);
+        semHistorico.set(ch, (semHistorico.get(ch) || 0) + 1);
+      }
+    } else if (line.startsWith('|I075|')) {
+      // |I075|COD_HIST|DESCR_HIST|
+      const reg = line.split('|');
+      if (reg.length > 3) {
+        const cod = pyStrip(reg[2]), texto = pyStrip(reg[3]);
+        if (cod && texto && !historicos.has(cod)) historicos.set(cod, texto);
+      }
     } else if (line.startsWith('|I050|')) {
       const reg = line.split('|');
       if (reg.length > 6) contasI050.push([pyStrip(reg[6]), reg.slice(7)]);
@@ -1063,6 +1081,7 @@ async function analisarSped(file, aoProgredir) {
   return {
     nomeEmpresa, dtInicial, dtFinal,
     initialBalances, finalBalances, contasOrigem, hierarquia,
+    historicos, histVazios: resumirSemHistorico(semHistorico, historicos),
     qtdPeriodosI150: qtdI150,
   };
 }
@@ -1297,13 +1316,29 @@ async function sugerirMapeamento(contasOrigem, plano, aoProgredir) {
   return sugestoes;
 }
 
+// Quantos lancamentos I250 estao sem historico e quantos o I075 consegue cobrir.
+function resumirSemHistorico(semHistorico, historicos) {
+  let total = 0, preenchiveis = 0, semCodigo = 0, codigoInexistente = 0;
+  for (const [cod, n] of semHistorico) {
+    total += n;
+    if (!cod) semCodigo += n;
+    else if (historicos.has(cod)) preenchiveis += n;
+    else codigoInexistente += n;
+  }
+  return { total, preenchiveis, semCodigo, codigoInexistente };
+}
+
 // =============================================================================
 // GERACAO DO SPED AJUSTADO
 //
 // O separador e' escrito ANTES de cada linha a partir da segunda, entao nao ha
 // quebra no fim do arquivo — os bytes sao os mesmos do "\r\n".join() original.
+//
+// Se `historicos` vier preenchido, todo I250 com HIST vazio e COD_HIST_PAD
+// informado recebe o texto do I075 correspondente. Sem isso o Dominio avisa que
+// o lancamento nao tem historico e so importa com o parametro liberado.
 // =============================================================================
-async function gerarSpedAjustado(file, mapFinal, gravar, aoProgredir) {
+async function gerarSpedAjustado(file, mapFinal, gravar, aoProgredir, historicos) {
   let primeiro = true;
   let buf = [];
 
@@ -1323,6 +1358,10 @@ async function gerarSpedAjustado(file, mapFinal, gravar, aoProgredir) {
       const reg = line.split('|');
       if (reg.length > 2 && mapFinal.has(reg[2])) {
         reg[2] = pyStrip(String(mapFinal.get(reg[2]))).replace(/\|/g, '');
+      }
+      if (historicos && reg.length > 8 && pyStrip(reg[8]) === '') {
+        const texto = historicos.get(pyStrip(reg[7]));
+        if (texto) reg[8] = texto;
       }
       escrever(reg.join('|'));
     } else {
@@ -1822,6 +1861,18 @@ function renderFinalizacao(st) {
   const nome = S.dados.nomeEmpresa;
 
   // --- 1. arquivo final
+  const hv = S.dados.histVazios;
+  $('blocoHist').hidden = !(hv && hv.total > 0);
+  if (hv && hv.total > 0) {
+    const partes = [`${hv.total.toLocaleString('pt-BR')} lançamentos (I250) sem histórico.`];
+    partes.push(hv.preenchiveis
+      ? `${hv.preenchiveis.toLocaleString('pt-BR')} podem ser preenchidos pelo histórico padrão (I075).`
+      : 'Nenhum tem código de histórico padrão encontrado no I075.');
+    const resto = hv.semCodigo + hv.codigoInexistente;
+    if (resto) partes.push(`${resto.toLocaleString('pt-BR')} continuarão sem histórico (sem código ou código inexistente no I075).`);
+    $('capHist').textContent = partes.join(' ');
+    $('preencherHist').disabled = !hv.preenchiveis;
+  }
   const c1 = $('finalArquivo');
   if (pendentes > 0) {
     c1.innerHTML = `<p class="msg aviso">⚠️ Faltam ${pendentes} mapeamentos.</p>
@@ -1902,16 +1953,17 @@ async function baixarSped(mapFinal, nomeArquivo) {
     }
   }
 
+  const historicos = $('preencherHist').checked && !$('preencherHist').disabled ? S.dados.historicos : null;
   progAbrir('Montando o SPED ajustado...');
   try {
     if (handle) {
       const w = await handle.createWritable();
-      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => w.write(b), progSet);
+      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => w.write(b), progSet, historicos);
       await w.close();
       progTexto('Arquivo gravado.');
     } else {
       const partes = [];
-      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => { partes.push(b); }, progSet);
+      await gerarSpedAjustado(S.arquivoSped, mapFinal, (b) => { partes.push(b); }, progSet, historicos);
       baixar(new Blob(partes, { type: 'text/plain' }), nomeArquivo);
     }
   } catch (e) {
